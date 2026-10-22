@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
@@ -13,6 +15,17 @@ from .services.wikimedia_oauth import WikimediaOAuth
 from .services.poll_security import PollSecurity
 
 logger = logging.getLogger(__name__)
+
+AVAILABLE_LANGUAGES = [
+    ('en', 'English'),
+    ('es', 'Español'),
+    ('fr', 'Français'),
+    ('de', 'Deutsch'),
+    ('it', 'Italiano'),
+    ('pt', 'Português'),
+    ('ca', 'Català'),
+    ('eo', 'Esperanto'),
+]
 
 
 def format_number_short(num: int) -> str:
@@ -105,6 +118,160 @@ def new_poll_view(request):
         'poll_type': poll_type,
     })
 
+
+# --- Wizard & Administration Steps ---
+
+def edit_poll_proposals_view(request, id, token):
+    poll = get_object_or_404(Poll, id=id, admin_token=token)
+
+    if request.method == 'POST':
+        proposals_text = request.POST.get('proposals_text', '')
+        labels = [line.strip() for line in proposals_text.splitlines() if line.strip()]
+
+        # Replace existing proposals
+        poll.proposals.all().delete()
+        for label in labels:
+            Proposal.objects.create(poll=poll, label=label)
+
+        messages.success(request, 'Propuestas actualizadas.')
+        return redirect('edit poll settings', id=poll.id, token=poll.admin_token)
+
+    current_proposals_text = "\n".join(p.label for p in poll.proposals.all().order_by('id'))
+    return render(request, 'polls/proposals.html', {
+        'poll': poll,
+        'current_proposals_text': current_proposals_text,
+    })
+
+
+def edit_poll_dates_view(request, id, token):
+    poll = get_object_or_404(Poll, id=id, admin_token=token)
+
+    if request.method == 'POST':
+        dates_text = request.POST.get('dates_text', '')
+        labels = [line.strip() for line in dates_text.splitlines() if line.strip()]
+
+        # Replace existing proposals/dates
+        poll.proposals.all().delete()
+        poll.dates.all().delete()
+
+        for label in labels:
+            Proposal.objects.create(poll=poll, label=label)
+
+        messages.success(request, 'Fechas actualizadas.')
+        return redirect('edit poll settings', id=poll.id, token=poll.admin_token)
+
+    current_dates_text = "\n".join(p.label for p in poll.proposals.all().order_by('id'))
+    return render(request, 'polls/dates.html', {
+        'poll': poll,
+        'current_dates_text': current_dates_text,
+    })
+
+
+def edit_poll_settings_view(request, id, token):
+    poll = get_object_or_404(Poll, id=id, admin_token=token)
+
+    if request.method == 'POST':
+        poll.disable_maybe = bool(request.POST.get('disable_maybe'))
+        poll.vote_no_by_default = bool(request.POST.get('vote_no_by_default'))
+        poll.are_results_public = bool(request.POST.get('are_results_public'))
+        poll.is_publicly_listed = bool(request.POST.get('is_publicly_listed'))
+        poll.is_password_for_votes_only = bool(request.POST.get('is_password_for_votes_only'))
+        poll.edit_vote_mode = request.POST.get('edit_vote_mode', 'own')
+
+        max_votes_raw = request.POST.get('max_votes', '').strip()
+        poll.max_votes = int(max_votes_raw) if max_votes_raw.isdigit() else None
+
+        password_raw = request.POST.get('password', '').strip()
+        poll.password = password_raw
+
+        # Wikimedia eligibility
+        age_raw = request.POST.get('min_wikimedia_account_age_months', '').strip()
+        poll.min_wikimedia_account_age_months = int(age_raw) if age_raw.isdigit() else None
+
+        project_raw = request.POST.get('min_wikimedia_edits_project', '').strip()
+        poll.min_wikimedia_edits_project = project_raw if project_raw else None
+
+        edits_raw = request.POST.get('min_wikimedia_edits_count', '').strip()
+        poll.min_wikimedia_edits_count = int(edits_raw) if edits_raw.isdigit() else None
+
+        poll.save()
+        messages.success(request, 'Ajustes actualizados correctamente.')
+        return redirect('poll summary', id=poll.id, token=poll.admin_token)
+
+    return render(request, 'polls/settings.html', {
+        'poll': poll,
+    })
+
+
+def poll_summary_view(request, id, token):
+    poll = get_object_or_404(Poll, id=id, admin_token=token)
+    proposals = poll.proposals.all().order_by('id')
+
+    return render(request, 'polls/summary.html', {
+        'poll': poll,
+        'proposals': proposals,
+    })
+
+
+def complete_poll_view(request, id, token):
+    poll = get_object_or_404(Poll, id=id, admin_token=token)
+
+    if request.method == 'POST':
+        poll.completed_at = timezone.now()
+        if not poll.slug:
+            poll.slug = generate_hex_id(12)
+        poll.save()
+        messages.success(request, '¡La encuesta ha sido publicada exitosamente!')
+        return redirect('poll', slug=poll.slug)
+
+    return redirect('poll summary', id=poll.id, token=poll.admin_token)
+
+
+def edit_poll_titles_view(request, id, token):
+    poll = get_object_or_404(Poll, id=id, admin_token=token)
+    current_titles = poll.localized_titles or {}
+
+    if request.method == 'POST':
+        new_titles = {}
+        for code, _ in AVAILABLE_LANGUAGES:
+            val = request.POST.get(f"title_{code}", '').strip()
+            if val:
+                new_titles[code] = val
+        poll.localized_titles = new_titles or None
+        poll.save()
+        messages.success(request, 'Traducciones del título guardadas.')
+        return redirect('poll admin', id=poll.id, token=poll.admin_token)
+
+    return render(request, 'polls/edit_titles.html', {
+        'poll': poll,
+        'available_languages': AVAILABLE_LANGUAGES,
+        'current_titles': current_titles,
+    })
+
+
+def edit_poll_descriptions_view(request, id, token):
+    poll = get_object_or_404(Poll, id=id, admin_token=token)
+    current_descriptions = poll.localized_descriptions or {}
+
+    if request.method == 'POST':
+        new_descs = {}
+        for code, _ in AVAILABLE_LANGUAGES:
+            val = request.POST.get(f"desc_{code}", '').strip()
+            if val:
+                new_descs[code] = val
+        poll.localized_descriptions = new_descs or None
+        poll.save()
+        messages.success(request, 'Traducciones de la descripción guardadas.')
+        return redirect('poll admin', id=poll.id, token=poll.admin_token)
+
+    return render(request, 'polls/edit_descriptions.html', {
+        'poll': poll,
+        'available_languages': AVAILABLE_LANGUAGES,
+        'current_descriptions': current_descriptions,
+    })
+
+
+# --- Poll View & Voting ---
 
 def poll_view(request, slug):
     poll = get_object_or_404(Poll, slug=slug)
@@ -206,6 +373,75 @@ def poll_view(request, slug):
     })
 
 
+def edit_vote_view(request, slug, vote_id):
+    poll = get_object_or_404(Poll, slug=slug)
+    vote = get_object_or_404(Vote, id=vote_id, poll=poll)
+
+    # Permission check: can current user edit this vote?
+    is_owner = (request.user.is_authenticated and vote.owner_id == request.user.id)
+    is_session_voter = (request.session.get(f"vote-{poll.id}") == vote.id)
+
+    if poll.is_closed or poll.edit_vote_mode == 'no':
+        messages.error(request, 'Esta encuesta no permite modificar votos.')
+        return redirect('poll', slug=poll.slug)
+
+    if poll.edit_vote_mode == 'own' and not (is_owner or is_session_voter):
+        messages.error(request, 'No tienes permiso para modificar este voto.')
+        return redirect('poll', slug=poll.slug)
+
+    proposals = poll.proposals.all().order_by('id')
+    existing_answers = {a.proposal_id: a.value for a in vote.answers.all()}
+
+    if request.method == 'POST':
+        author_name = request.POST.get('author_name', '').strip()
+        if not is_owner and author_name:
+            vote.author_name = author_name
+            vote.save()
+
+        for proposal in proposals:
+            val = request.POST.get(f"proposal_{proposal.id}")
+            answer, _ = Answer.objects.get_or_create(vote=vote, proposal=proposal)
+            answer.value = val
+            answer.save()
+
+        messages.success(request, 'Tu voto ha sido modificado exitosamente.')
+        return redirect('poll', slug=poll.slug)
+
+    return render(request, 'polls/edit_vote.html', {
+        'poll': poll,
+        'vote': vote,
+        'proposals': proposals,
+        'existing_answers': existing_answers,
+    })
+
+
+def poll_csv_view(request, slug):
+    poll = get_object_or_404(Poll, slug=slug)
+    proposals = poll.proposals.all().order_by('id')
+    votes = poll.votes.all().order_by('created_at').prefetch_related('answers')
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    filename = f"{poll.slug}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response.write('\ufeff')  # UTF-8 BOM for Microsoft Excel compatibility
+
+    writer = csv.writer(response)
+    header = ['Participante'] + [p.label for p in proposals]
+    writer.writerow(header)
+
+    human_values = {'yes': 'Sí', 'maybe': 'Tal vez', 'no': 'No'}
+
+    for vote in votes:
+        answers_map = {a.proposal_id: a.value for a in vote.answers.all()}
+        row = [vote.author_name]
+        for p in proposals:
+            val = answers_map.get(p.id, '')
+            row.append(human_values.get(val, ''))
+        writer.writerow(row)
+
+    return response
+
+
 def authenticate_poll_view(request, slug):
     poll = get_object_or_404(Poll, slug=slug)
 
@@ -238,6 +474,17 @@ def poll_admin_view(request, id, token):
     return render(request, 'polls/admin.html', {
         'poll': poll,
     })
+
+
+def delete_vote_view(request, id, token, vote_id):
+    poll = get_object_or_404(Poll, id=id, admin_token=token)
+    vote = get_object_or_404(Vote, id=vote_id, poll=poll)
+
+    if request.method == 'POST':
+        vote.delete()
+        messages.success(request, 'El voto ha sido eliminado.')
+
+    return redirect('poll', slug=poll.slug)
 
 
 # --- Authentication Views ---

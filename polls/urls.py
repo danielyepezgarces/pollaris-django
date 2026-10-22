@@ -6,8 +6,24 @@ urlpatterns = [
     path('polls/choose', views.choose_poll_type_view, name='choose poll type'),
     path('polls/new', views.new_poll_view, name='new poll'),
     path('polls/public', views.public_polls_view, name='public polls'),
+
+    # Poll view and CSV export
+    path('polls/<str:slug>.csv', views.poll_csv_view, name='poll csv'),
     path('polls/<str:slug>/authenticate', views.authenticate_poll_view, name='authenticate poll'),
     path('polls/<str:slug>', views.poll_view, name='poll'),
+
+    # Votes modification
+    path('polls/<str:slug>/votes/<str:vote_id>/edit', views.edit_vote_view, name='edit vote'),
+    path('polls/<str:id>/<str:token>/votes/<str:vote_id>/deletion', views.delete_vote_view, name='delete vote'),
+
+    # Wizard & Administration routes
+    path('polls/<str:id>/<str:token>/proposals', views.edit_poll_proposals_view, name='edit poll proposals'),
+    path('polls/<str:id>/<str:token>/dates', views.edit_poll_dates_view, name='edit poll dates'),
+    path('polls/<str:id>/<str:token>/settings', views.edit_poll_settings_view, name='edit poll settings'),
+    path('polls/<str:id>/<str:token>/summary', views.poll_summary_view, name='poll summary'),
+    path('polls/<str:id>/<str:token>/complete', views.complete_poll_view, name='complete poll'),
+    path('polls/<str:id>/<str:token>/edits/titles', views.edit_poll_titles_view, name='edit poll titles'),
+    path('polls/<str:id>/<str:token>/edits/descriptions', views.edit_poll_descriptions_view, name='edit poll descriptions'),
     path('polls/<str:id>/<str:token>/admin', views.poll_admin_view, name='poll admin'),
 
     # Authentication routes

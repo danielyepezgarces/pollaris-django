@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load poll_extras %}
+
+{% block title %}Resumen y publicación – {{ poll.title }}{% endblock %}
+
+{% block content %}
+<div class="wrapper flow flow--large" style="max-width: 700px; margin: 2.5rem auto; padding: 0 1rem;">
+    <!-- Step wizard header -->
+    <div style="display: flex; justify-content: space-between; border-bottom: 2px solid var(--color-grey6, #ddd); padding-bottom: 1rem; margin-bottom: 2rem; font-size: 0.9rem;">
+        <span class="text--secondary">1. Datos básicos</span>
+        <span class="text--secondary">2. Propuestas</span>
+        <span class="text--secondary">3. Configuración</span>
+        <span style="font-weight: bold; color: var(--color-primary8, #46a758);">4. Resumen y Publicar</span>
+    </div>
+
+    <h1>Resumen de la encuesta</h1>
+    <p class="text--secondary">Verifica que todos los datos sean correctos antes de publicarla.</p>
+
+    <div style="background: var(--color-grey1, #fff); border: 1px solid var(--color-grey6, #ddd); border-radius: 8px; padding: 1.5rem;" class="flow flow--medium">
+        <h2 style="font-size: 1.4rem; margin-bottom: 0.5rem;">{{ poll.title }}</h2>
+        <p class="text--secondary">
+            Creada por <strong>{{ poll.author_name }}</strong> ({{ poll.author_email }}) &bull; Idioma: {{ poll.locale }}
+        </p>
+
+        {% if poll.description %}
+            <div style="margin: 1rem 0; padding: 0.75rem; background: var(--color-grey2, #fafafa); border-radius: 6px;">
+                {{ poll.description|linebreaks }}
+            </div>
+        {% endif %}
+
+        <h3 style="font-size: 1.1rem; margin-top: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.25rem;">
+            Opciones a votar ({{ proposals|length }})
+        </h3>
+        <ul style="margin: 0.5rem 0; padding-left: 1.25rem;">
+            {% for proposal in proposals %}
+                <li style="margin-bottom: 0.25rem;">{{ proposal.label }}</li>
+            {% empty %}
+                <li style="color: red;">No hay opciones definidas.</li>
+            {% endfor %}
+        </ul>
+
+        <h3 style="font-size: 1.1rem; margin-top: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.25rem;">
+            Configuración activa
+        </h3>
+        <ul style="margin: 0.5rem 0; padding-left: 1.25rem; font-size: 0.95rem;" class="text--secondary">
+            <li>Modo de edición de voto: <strong>{{ poll.edit_vote_mode }}</strong></li>
+            <li>Resultados públicos: <strong>{% if poll.are_results_public %}Sí{% else %}No{% endif %}</strong></li>
+            <li>Listada públicamente: <strong>{% if poll.is_publicly_listed %}Sí{% else %}No{% endif %}</strong></li>
+            {% if poll.disable_maybe %}<li>Opción "Tal vez" deshabilitada</li>{% endif %}
+            {% if poll.password %}<li>Protegida con contraseña</li>{% endif %}
+            {% if poll.min_wikimedia_account_age_months %}<li>Antigüedad Wikimedia: al menos {{ poll.min_wikimedia_account_age_months }} meses</li>{% endif %}
+            {% if poll.min_wikimedia_edits_count %}<li>Ediciones en {{ poll.min_wikimedia_edits_project }}: al menos {{ poll.min_wikimedia_edits_count }}</li>{% endif %}
+        </ul>
+    </div>
+
+    <form method="post" action="{% url 'complete poll' id=poll.id token=poll.admin_token %}" style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+        {% csrf_token %}
+        <a href="{% url 'edit poll settings' id=poll.id token=poll.admin_token %}" class="button" style="text-decoration: none;">
+            Modificar ajustes
+        </a>
+        <button type="submit" class="button button--primary" style="padding: 0.85rem 2.5rem; font-size: 1.1rem; cursor: pointer;">
+            Publicar encuesta
+        </button>
+    </form>
+</div>
+{% endblock %}

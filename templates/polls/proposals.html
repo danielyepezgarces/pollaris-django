@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load poll_extras %}
+
+{% block title %}Propuestas – {{ poll.title }}{% endblock %}
+
+{% block content %}
+<div class="wrapper flow flow--large" style="max-width: 650px; margin: 2.5rem auto; padding: 0 1rem;">
+    <!-- Step wizard header -->
+    <div style="display: flex; justify-content: space-between; border-bottom: 2px solid var(--color-grey6, #ddd); padding-bottom: 1rem; margin-bottom: 2rem; font-size: 0.9rem;">
+        <span class="text--secondary">1. Datos básicos</span>
+        <span style="font-weight: bold; color: var(--color-primary8, #46a758);">2. Propuestas</span>
+        <span class="text--secondary">3. Configuración</span>
+        <span class="text--secondary">4. Resumen</span>
+    </div>
+
+    <h1>Definir opciones a votar</h1>
+    <p class="text--secondary">Encuesta: <strong>{{ poll.title }}</strong></p>
+
+    <form method="post" class="flow flow--medium">
+        {% csrf_token %}
+
+        <div class="field">
+            <label for="proposals_text" style="font-weight: bold; display: block; margin-bottom: 0.5rem;">
+                Propuestas u opciones (una por línea) *
+            </label>
+            <textarea
+                name="proposals_text"
+                id="proposals_text"
+                rows="8"
+                required
+                style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-grey7, #ccc); border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 1rem;"
+                placeholder="Opción 1&#10;Opción 2&#10;Opción 3"
+            >{{ current_proposals_text }}</textarea>
+            <small class="text--secondary" style="display: block; margin-top: 0.5rem;">
+                Escribe cada opción en una línea distinta. Puedes volver a editarlas más tarde.
+            </small>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+            <a href="{% url 'poll admin' id=poll.id token=poll.admin_token %}" class="button" style="text-decoration: none;">
+                Cancelar
+            </a>
+            <button type="submit" class="button button--primary" style="padding: 0.75rem 2rem; cursor: pointer;">
+                Guardar y configurar ajustes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

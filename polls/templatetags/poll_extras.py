@@ -18,3 +18,10 @@ def icon(icon_name: str, additional_class_names: str = '') -> str:
         f'</svg>'
     )
     return mark_safe(svg)
+
+
+@register.filter
+def get_item(dictionary, key):
+    if isinstance(dictionary, dict):
+        return dictionary.get(key)
+    return None

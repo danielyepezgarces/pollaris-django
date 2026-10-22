@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load poll_extras %}
+
+{% block title %}Configuración – {{ poll.title }}{% endblock %}
+
+{% block content %}
+<div class="wrapper flow flow--large" style="max-width: 700px; margin: 2.5rem auto; padding: 0 1rem;">
+    <!-- Step wizard header -->
+    <div style="display: flex; justify-content: space-between; border-bottom: 2px solid var(--color-grey6, #ddd); padding-bottom: 1rem; margin-bottom: 2rem; font-size: 0.9rem;">
+        <span class="text--secondary">1. Datos básicos</span>
+        <span class="text--secondary">2. Propuestas</span>
+        <span style="font-weight: bold; color: var(--color-primary8, #46a758);">3. Configuración</span>
+        <span class="text--secondary">4. Resumen</span>
+    </div>
+
+    <h1>Configuración de la encuesta</h1>
+    <p class="text--secondary">Ajusta los permisos, privacidad y requisitos de <strong>{{ poll.title }}</strong>.</p>
+
+    <form method="post" class="flow flow--large">
+        {% csrf_token %}
+
+        <!-- Opciones de voto -->
+        <div style="background: var(--color-grey1, #fff); border: 1px solid var(--color-grey6, #ddd); border-radius: 8px; padding: 1.5rem;" class="flow flow--medium">
+            <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-primary8, #46a758);">
+                Reglas de votación
+            </h2>
+
+            <div class="field">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="disable_maybe" {% if poll.disable_maybe %}checked{% endif %}>
+                    <span>Deshabilitar opción "Tal vez" (solo Sí / No)</span>
+                </label>
+            </div>
+
+            <div class="field">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="vote_no_by_default" {% if poll.vote_no_by_default %}checked{% endif %}>
+                    <span>Marcar "No" por defecto en las opciones</span>
+                </label>
+            </div>
+
+            <div class="field" style="margin-top: 1rem;">
+                <label for="max_votes" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
+                    Límite máximo de votos (opcional)
+                </label>
+                <input type="number" name="max_votes" id="max_votes" value="{{ poll.max_votes|default:'' }}" min="1" placeholder="Ej: 50" style="width: 150px; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                <small class="text--secondary" style="display: block;">La encuesta se cerrará automáticamente al alcanzar este total.</small>
+            </div>
+
+            <div class="field" style="margin-top: 1rem;">
+                <label for="edit_vote_mode" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
+                    Permiso de modificación de votos
+                </label>
+                <select name="edit_vote_mode" id="edit_vote_mode" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="own" {% if poll.edit_vote_mode == 'own' %}selected{% endif %}>Cada usuario puede modificar únicamente su propio voto</option>
+                    <option value="no" {% if poll.edit_vote_mode == 'no' %}selected{% endif %}>Nadie puede modificar su voto una vez emitido</option>
+                    <option value="any" {% if poll.edit_vote_mode == 'any' %}selected{% endif %}>Cualquiera puede modificar cualquier voto</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Requisitos de Wikimedia -->
+        <div style="background: var(--color-grey1, #fff); border: 1px solid var(--color-grey6, #ddd); border-radius: 8px; padding: 1.5rem;" class="flow flow--medium">
+            <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-primary8, #46a758);">
+                Requisitos para cuentas de Wikimedia (opcional)
+            </h2>
+            <p class="text--secondary" style="font-size: 0.9rem; margin-bottom: 1rem;">
+                Restringe la participación únicamente a editores de Wikimedia que cumplan ciertos criterios.
+            </p>
+
+            <div class="field">
+                <label for="min_wikimedia_account_age_months" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
+                    Antigüedad mínima de la cuenta (en meses)
+                </label>
+                <input type="number" name="min_wikimedia_account_age_months" id="min_wikimedia_account_age_months" value="{{ poll.min_wikimedia_account_age_months|default:'' }}" min="0" placeholder="Ej: 3" style="width: 150px; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+
+            <div class="cols" style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <div class="field" style="flex: 2;">
+                    <label for="min_wikimedia_edits_project" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
+                        Proyecto Wikimedia requerido
+                    </label>
+                    <input type="text" name="min_wikimedia_edits_project" id="min_wikimedia_edits_project" list="wikimedia-projects" value="{{ poll.min_wikimedia_edits_project|default:'' }}" placeholder="Ej: eswiki o es.wikipedia.org" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                    <datalist id="wikimedia-projects">
+                        <option value="eswiki"></option>
+                        <option value="commonswiki"></option>
+                        <option value="wikidatawiki"></option>
+                        <option value="metawiki"></option>
+                        <option value="enwiki"></option>
+                    </datalist>
+                </div>
+
+                <div class="field" style="flex: 1;">
+                    <label for="min_wikimedia_edits_count" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
+                        Número mínimo de ediciones
+                    </label>
+                    <input type="number" name="min_wikimedia_edits_count" id="min_wikimedia_edits_count" value="{{ poll.min_wikimedia_edits_count|default:'' }}" min="0" placeholder="Ej: 50" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Privacidad y acceso -->
+        <div style="background: var(--color-grey1, #fff); border: 1px solid var(--color-grey6, #ddd); border-radius: 8px; padding: 1.5rem;" class="flow flow--medium">
+            <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--color-primary8, #46a758);">
+                Privacidad y protección
+            </h2>
+
+            <div class="field">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="are_results_public" {% if poll.are_results_public %}checked{% endif %}>
+                    <span>Hacer resultados públicos para todos los participantes</span>
+                </label>
+            </div>
+
+            <div class="field">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="is_publicly_listed" {% if poll.is_publicly_listed %}checked{% endif %}>
+                    <span>Listar en la sección de encuestas públicas</span>
+                </label>
+            </div>
+
+            <div class="field" style="margin-top: 1rem;">
+                <label for="password" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
+                    Contraseña de la encuesta (opcional)
+                </label>
+                <input type="text" name="password" id="password" value="{{ poll.password }}" placeholder="Dejar en blanco si no requiere contraseña" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            </div>
+
+            <div class="field">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="is_password_for_votes_only" {% if poll.is_password_for_votes_only %}checked{% endif %}>
+                    <span>Requerir contraseña únicamente para votar (permitir ver resultados sin clave)</span>
+                </label>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+            <a href="{% url 'edit poll proposals' id=poll.id token=poll.admin_token %}" class="button" style="text-decoration: none;">
+                Volver a propuestas
+            </a>
+            <button type="submit" class="button button--primary" style="padding: 0.75rem 2rem; cursor: pointer;">
+                Guardar y ver resumen
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

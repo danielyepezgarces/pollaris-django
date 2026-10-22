@@ -18,6 +18,22 @@
                 {{ poll.description|linebreaks }}
             </div>
         {% endif %}
+
+        <div class="poll-actions" style="display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;">
+            <a class="button button--small" href="{% url 'poll csv' slug=poll.slug %}" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none;">
+                {% icon 'file-csv' %} Descargar CSV
+            </a>
+            {% if my_vote and not poll.is_closed and poll.edit_vote_mode != 'no' %}
+                <a class="button button--small" href="{% url 'edit vote' slug=poll.slug vote_id=my_vote.id %}" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none;">
+                    {% icon 'pen-to-square' %} Modificar mi voto
+                </a>
+            {% endif %}
+            {% if user.is_authenticated and poll.owner_id == user.id %}
+                <a class="button button--small" href="{% url 'poll admin' id=poll.id token=poll.admin_token %}" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none;">
+                    {% icon 'gear' %} Administrar encuesta
+                </a>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Table of Proposals and Votes -->

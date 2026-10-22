@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load poll_extras %}
+
+{% block title %}Fechas – {{ poll.title }}{% endblock %}
+
+{% block content %}
+<div class="wrapper flow flow--large" style="max-width: 650px; margin: 2.5rem auto; padding: 0 1rem;">
+    <!-- Step wizard header -->
+    <div style="display: flex; justify-content: space-between; border-bottom: 2px solid var(--color-grey6, #ddd); padding-bottom: 1rem; margin-bottom: 2rem; font-size: 0.9rem;">
+        <span class="text--secondary">1. Datos básicos</span>
+        <span style="font-weight: bold; color: var(--color-primary8, #46a758);">2. Fechas y horarios</span>
+        <span class="text--secondary">3. Configuración</span>
+        <span class="text--secondary">4. Resumen</span>
+    </div>
+
+    <h1>Seleccionar fechas para el evento</h1>
+    <p class="text--secondary">Encuesta: <strong>{{ poll.title }}</strong></p>
+
+    <form method="post" class="flow flow--medium">
+        {% csrf_token %}
+
+        <div class="field">
+            <label for="dates_text" style="font-weight: bold; display: block; margin-bottom: 0.5rem;">
+                Fechas u horarios propuestos (uno por línea) *
+            </label>
+            <textarea
+                name="dates_text"
+                id="dates_text"
+                rows="8"
+                required
+                style="width: 100%; padding: 0.75rem; border: 1px solid var(--color-grey7, #ccc); border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 1rem;"
+                placeholder="Lunes 10 de Noviembre, 10:00 UTC&#10;Martes 11 de Noviembre, 15:00 UTC&#10;Miércoles 12 de Noviembre, 18:00 UTC"
+            >{{ current_dates_text }}</textarea>
+            <small class="text--secondary" style="display: block; margin-top: 0.5rem;">
+                Escribe cada fecha o franja horaria propuesta en una línea.
+            </small>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+            <a href="{% url 'poll admin' id=poll.id token=poll.admin_token %}" class="button" style="text-decoration: none;">
+                Cancelar
+            </a>
+            <button type="submit" class="button button--primary" style="padding: 0.75rem 2rem; cursor: pointer;">
+                Guardar y configurar ajustes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
