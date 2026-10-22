@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / '.env.local', override=True)
 
 try:
     import pymysql
@@ -30,10 +31,10 @@ except ImportError:
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-q@vcht10)3e3=0rl)(9+_a(gtx#@%@*fqli-oabb2#s=3vo*b)'
+SECRET_KEY = os.getenv('SECRET_KEY', os.getenv('APP_SECRET', 'django-insecure-q@vcht10)3e3=0rl)(9+_a(gtx#@%@*fqli-oabb2#s=3vo*b)'))
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = os.getenv(
     'ALLOWED_HOSTS',
@@ -98,15 +99,50 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-if os.getenv('DB_NAME') or os.getenv('TOOLFORGE_DB_NAME'):
+from urllib.parse import urlparse
+import configparser
+
+database_url = os.getenv('DATABASE_URL')
+db_name = os.getenv('DB_NAME') or os.getenv('TOOLFORGE_DB_NAME')
+db_user = os.getenv('DB_USER', '')
+db_password = os.getenv('DB_PASSWORD', '')
+db_host = os.getenv('DB_HOST', 'tools.db.svc.wikimedia.cloud')
+db_port = os.getenv('DB_PORT', '3306')
+
+if database_url:
+    parsed_db = urlparse(database_url)
+    if parsed_db.path and parsed_db.path != '/':
+        db_name = parsed_db.path.lstrip('/')
+    if parsed_db.username:
+        db_user = parsed_db.username
+    if parsed_db.password:
+        db_password = parsed_db.password
+    if parsed_db.hostname:
+        db_host = parsed_db.hostname
+    if parsed_db.port:
+        db_port = str(parsed_db.port)
+
+if db_name and (not db_user or not db_password):
+    for cnf_path in [Path.home() / 'replica.my.cnf', Path.home() / '.my.cnf']:
+        if cnf_path.is_file():
+            try:
+                cfg = configparser.ConfigParser(interpolation=None)
+                cfg.read(cnf_path)
+                if 'client' in cfg:
+                    db_user = db_user or cfg['client'].get('user', '').strip('"\'')
+                    db_password = db_password or cfg['client'].get('password', '').strip('"\'')
+            except Exception:
+                pass
+
+if db_name:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.getenv('DB_NAME') or os.getenv('TOOLFORGE_DB_NAME'),
-            'USER': os.getenv('DB_USER', ''),
-            'PASSWORD': os.getenv('DB_PASSWORD', ''),
-            'HOST': os.getenv('DB_HOST', 'tools.db.svc.wikimedia.cloud'),
-            'PORT': os.getenv('DB_PORT', '3306'),
+            'NAME': db_name,
+            'USER': db_user,
+            'PASSWORD': db_password,
+            'HOST': db_host,
+            'PORT': db_port,
             'OPTIONS': {
                 'charset': 'utf8mb4',
             },
