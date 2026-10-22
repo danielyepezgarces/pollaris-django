@@ -43,8 +43,9 @@
                 <div class="header__actions">
                     {% if user.is_authenticated %}
                         <span class="text--secondary text--small">{{ user.display_name }}</span>
+                        <a class="button header__button button--small" href="{% url 'logout' %}" style="margin-left: 0.5rem;">Cerrar sesión</a>
                     {% else %}
-                        <a class="button header__button button--small" href="/admin/login/">
+                        <a class="button header__button button--small" href="{% url 'login' %}?returnto={{ request.path }}">
                             Iniciar sesión
                         </a>
                     {% endif %}

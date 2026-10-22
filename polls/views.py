@@ -1,11 +1,18 @@
 import json
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, Http404
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.contrib import messages
+from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.utils import timezone
+
 from .models import Poll, Proposal, Date, Vote, Answer, Comment, User, PollCohost, generate_hex_id
+from .services.wikimedia_oauth import WikimediaOAuth
+from .services.poll_security import PollSecurity
+
+logger = logging.getLogger(__name__)
 
 
 def format_number_short(num: int) -> str:
@@ -71,7 +78,7 @@ def new_poll_view(request):
         poll = Poll(
             title=title,
             description=description,
-            author_name=author_name or (request.user.username if request.user.is_authenticated else 'Anónimo'),
+            author_name=author_name or (request.user.display_name if request.user.is_authenticated else 'Anónimo'),
             author_email=author_email or (request.user.email if request.user.is_authenticated else ''),
             type=poll_type,
             locale=locale,
@@ -84,7 +91,6 @@ def new_poll_view(request):
         # Handle proposals
         proposals_raw = request.POST.getlist('proposals')
         if not proposals_raw:
-            # Fallback to lines in a textarea
             proposals_text = request.POST.get('proposals_text', '')
             proposals_raw = [p.strip() for p in proposals_text.splitlines() if p.strip()]
 
@@ -102,6 +108,11 @@ def new_poll_view(request):
 
 def poll_view(request, slug):
     poll = get_object_or_404(Poll, slug=slug)
+
+    # 1. Check full password protection
+    if not PollSecurity.is_authenticated(poll, request.session):
+        return redirect('authenticate poll', slug=poll.slug)
+
     proposals = poll.proposals.all().order_by('id')
     votes = poll.votes.all().order_by('created_at').prefetch_related('answers')
     comments = poll.comments.all().order_by('created_at')
@@ -110,15 +121,29 @@ def poll_view(request, slug):
     my_vote = None
     if request.user.is_authenticated:
         my_vote = Vote.objects.filter(poll=poll, owner=request.user).first()
+        if not my_vote:
+            unclaimed = Vote.objects.filter(poll=poll, owner__isnull=True, author_name=request.user.username).first()
+            if unclaimed:
+                unclaimed.owner = request.user
+                unclaimed.save()
+                my_vote = unclaimed
     else:
         vote_id = request.session.get(f"vote-{poll.id}")
         if vote_id:
             my_vote = Vote.objects.filter(id=vote_id, poll=poll).first()
 
+    # Check eligibility to vote
+    can_vote, eligibility_errors = PollSecurity.check_vote_eligibility(poll, request.user, request.session)
+
     if request.method == 'POST':
         action = request.POST.get('action', 'vote')
 
-        if action == 'vote' and not poll.is_closed:
+        if action == 'vote':
+            if not can_vote:
+                for err in eligibility_errors:
+                    messages.error(request, err)
+                return redirect('poll', slug=poll.slug)
+
             author_name = request.POST.get('author_name', '').strip()
             if not author_name and request.user.is_authenticated:
                 author_name = request.user.display_name
@@ -126,7 +151,6 @@ def poll_view(request, slug):
             if not author_name:
                 author_name = 'Participante'
 
-            # Create or update vote
             vote = my_vote or Vote(poll=poll)
             vote.author_name = author_name
             if request.user.is_authenticated:
@@ -136,7 +160,6 @@ def poll_view(request, slug):
             if not request.user.is_authenticated:
                 request.session[f"vote-{poll.id}"] = vote.id
 
-            # Save answers
             for proposal in proposals:
                 val = request.POST.get(f"proposal_{proposal.id}")
                 answer, _ = Answer.objects.get_or_create(vote=vote, proposal=proposal)
@@ -178,6 +201,24 @@ def poll_view(request, slug):
         'comments': comments,
         'my_vote': my_vote,
         'results': results,
+        'can_vote': can_vote,
+        'eligibility_errors': eligibility_errors,
+    })
+
+
+def authenticate_poll_view(request, slug):
+    poll = get_object_or_404(Poll, slug=slug)
+
+    if request.method == 'POST':
+        password = request.POST.get('password', '')
+        if PollSecurity.verify_password(poll, password):
+            PollSecurity.authenticate(poll, request.session)
+            return redirect('poll', slug=poll.slug)
+        else:
+            messages.error(request, 'La contraseña ingresada no es correcta.')
+
+    return render(request, 'polls/authenticate.html', {
+        'poll': poll,
     })
 
 
@@ -197,3 +238,70 @@ def poll_admin_view(request, id, token):
     return render(request, 'polls/admin.html', {
         'poll': poll,
     })
+
+
+# --- Authentication Views ---
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('home')
+
+    returnto = request.GET.get('returnto')
+    if returnto and returnto.startswith('/') and not returnto.startswith('//'):
+        request.session['login_returnto'] = returnto
+
+    oauth = WikimediaOAuth()
+    return render(request, 'login/login.html', {
+        'wikimedia_oauth_enabled': oauth.is_configured(),
+    })
+
+
+def login_wikimedia_view(request):
+    oauth = WikimediaOAuth()
+    if not oauth.is_configured():
+        messages.error(request, 'Wikimedia OAuth no está configurado.')
+        return redirect('login')
+
+    try:
+        auth_url = oauth.build_authorization_url(request.session)
+        return redirect(auth_url)
+    except Exception as e:
+        logger.error(f"Error al iniciar Wikimedia OAuth: {e}")
+        messages.error(request, 'No se pudo iniciar la conexión con Wikimedia.')
+        return redirect('login')
+
+
+def login_wikimedia_callback_view(request):
+    oauth = WikimediaOAuth()
+    if not oauth.is_configured():
+        messages.error(request, 'Wikimedia OAuth no está configurado.')
+        return redirect('login')
+
+    oauth_token = request.GET.get('oauth_token', '')
+    oauth_verifier = request.GET.get('oauth_verifier', '')
+
+    if not oauth.has_valid_callback(request.session, oauth_token, oauth_verifier):
+        messages.error(request, 'La autenticación con Wikimedia fue cancelada o el token expiró.')
+        return redirect('login')
+
+    try:
+        profile = oauth.fetch_profile(request.session, oauth_verifier)
+        user = oauth.synchronize_wikimedia_user(profile)
+        auth_login(request, user)
+        messages.success(request, f"¡Bienvenido, {user.display_name}!")
+    except Exception as e:
+        logger.error(f"Error al completar Wikimedia OAuth: {e}")
+        messages.error(request, f"Error al autenticar con Wikimedia: {e}")
+        return redirect('login')
+
+    returnto = request.session.pop('login_returnto', None)
+    if returnto and returnto.startswith('/') and not returnto.startswith('//'):
+        return redirect(returnto)
+
+    return redirect('home')
+
+
+def logout_view(request):
+    auth_logout(request)
+    messages.success(request, 'Has cerrado sesión exitosamente.')
+    return redirect('home')

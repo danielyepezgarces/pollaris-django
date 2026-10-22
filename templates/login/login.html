@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load poll_extras %}
+
+{% block title %}Iniciar sesión{% endblock %}
+
+{% block content %}
+<div class="wrapper flow flow--large" style="max-width: 500px; margin: 3rem auto; padding: 0 1rem; text-align: center;">
+    <h1 style="font-size: 2rem; margin-bottom: 1.5rem;">Iniciar sesión en Pollaris</h1>
+
+    {% if wikimedia_oauth_enabled %}
+        <div style="background: var(--color-grass1, #fff); border: 1px solid var(--color-primary7, #94ce9a); border-radius: 8px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);" class="flow flow--medium">
+            <p style="font-weight: bold; font-size: 1.1rem; margin-bottom: 1rem;">
+                Accede con tu cuenta de Wikimedia / Wikipedia
+            </p>
+
+            <a href="{% url 'login wikimedia' %}" class="button button--primary" style="display: block; width: 100%; padding: 0.8rem 1rem; font-size: 1.1rem; text-decoration: none; box-sizing: border-box;">
+                Iniciar sesión con Wikimedia
+            </a>
+
+            <p class="text--secondary" style="font-size: 0.85rem; margin-top: 1rem; line-height: 1.4;">
+                Permite autenticarte de forma segura utilizando tu cuenta existente en cualquier proyecto de la Fundación Wikimedia (Wikipedia, Commons, Meta, Wikidata, etc.).
+            </p>
+        </div>
+    {% else %}
+        <div style="background: var(--color-grey3, #f5f5f5); border: 1px solid var(--color-grey6, #ddd); border-radius: 8px; padding: 1.5rem;">
+            <p class="text--secondary">
+                El inicio de sesión con Wikimedia OAuth no está configurado en las variables de entorno locales.
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

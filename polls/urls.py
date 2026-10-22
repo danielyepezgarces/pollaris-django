@@ -6,6 +6,13 @@ urlpatterns = [
     path('polls/choose', views.choose_poll_type_view, name='choose poll type'),
     path('polls/new', views.new_poll_view, name='new poll'),
     path('polls/public', views.public_polls_view, name='public polls'),
+    path('polls/<str:slug>/authenticate', views.authenticate_poll_view, name='authenticate poll'),
     path('polls/<str:slug>', views.poll_view, name='poll'),
     path('polls/<str:id>/<str:token>/admin', views.poll_admin_view, name='poll admin'),
+
+    # Authentication routes
+    path('login', views.login_view, name='login'),
+    path('login/wikimedia', views.login_wikimedia_view, name='login wikimedia'),
+    path('login/wikimedia/callback', views.login_wikimedia_callback_view, name='login wikimedia callback'),
+    path('logout', views.logout_view, name='logout'),
 ]

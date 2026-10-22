@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load poll_extras %}
+
+{% block title %}Contraseña requerida{% endblock %}
+
+{% block content %}
+<div class="wrapper flow flow--large" style="max-width: 450px; margin: 3rem auto; padding: 0 1rem; text-align: center;">
+    <div style="background: var(--color-grey1, #fff); border: 1px solid var(--color-grey6, #ddd); border-radius: 8px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);" class="flow flow--medium">
+        <div style="margin-bottom: 0.5rem; color: var(--color-grey10, #666);">
+            {% icon 'lock' %}
+        </div>
+        <h1 style="font-size: 1.6rem; margin-bottom: 0.5rem;">Esta encuesta está protegida</h1>
+        <p class="text--secondary" style="font-size: 0.9rem;">
+            Ingresa la contraseña para acceder a la encuesta <strong>{{ poll.title }}</strong>.
+        </p>
+
+        <form method="post" style="margin-top: 1.5rem;" class="flow flow--small">
+            {% csrf_token %}
+            <div class="field" style="text-align: left;">
+                <label for="password" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">Contraseña</label>
+                <input type="password" name="password" id="password" required autofocus style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-top: 1rem;">
+                <button type="submit" class="button button--primary" style="width: 100%; padding: 0.7rem; font-size: 1rem; cursor: pointer;">
+                    Acceder a la encuesta
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

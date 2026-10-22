@@ -94,46 +94,66 @@
 
                 <!-- Voting Form Row -->
                 {% if not poll.is_closed %}
-                    <tr style="background: #ffffff; border-top: 2px solid var(--color-primary8, #46a758);">
-                        <td colspan="{{ proposals|length|add:1 }}" style="padding: 1.5rem 0.75rem 0 0.75rem;">
-                            <form method="post" style="display: flex; flex-direction: column; gap: 1rem;">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="vote">
+                    {% if can_vote %}
+                        <tr style="background: #ffffff; border-top: 2px solid var(--color-primary8, #46a758);">
+                            <td colspan="{{ proposals|length|add:1 }}" style="padding: 1.5rem 0.75rem 0 0.75rem;">
+                                <form method="post" style="display: flex; flex-direction: column; gap: 1rem;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="vote">
 
-                                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                                    <label for="author_name" style="font-weight: bold;">Tu nombre:</label>
-                                    <input type="text" name="author_name" id="author_name" required value="{{ user.display_name|default:'' }}" placeholder="Tu nombre..." style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 200px;">
-                                </div>
+                                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                                        <label for="author_name" style="font-weight: bold;">Tu nombre:</label>
+                                        <input type="text" name="author_name" id="author_name" required value="{{ user.display_name|default:'' }}" placeholder="Tu nombre..." style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 200px;">
+                                    </div>
 
-                                <div style="display: grid; grid-template-columns: repeat({{ proposals|length }}, 1fr); gap: 1rem; margin-top: 0.5rem; text-align: center;">
-                                    {% for proposal in proposals %}
-                                        <div style="border: 1px solid var(--color-grey6, #ddd); border-radius: 6px; padding: 0.75rem; background: var(--color-grey1, #fff);">
-                                            <div style="font-weight: bold; margin-bottom: 0.5rem;">{{ proposal.label }}</div>
-                                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                                <label style="cursor: pointer; color: var(--color-grass11, #2a7e3b);">
-                                                    <input type="radio" name="proposal_{{ proposal.id }}" value="yes" checked> Sí
-                                                </label>
-                                                {% if not poll.disable_maybe %}
-                                                    <label style="cursor: pointer; color: var(--color-yellow11, #9e6c00);">
-                                                        <input type="radio" name="proposal_{{ proposal.id }}" value="maybe"> Tal vez
+                                    <div style="display: grid; grid-template-columns: repeat({{ proposals|length }}, 1fr); gap: 1rem; margin-top: 0.5rem; text-align: center;">
+                                        {% for proposal in proposals %}
+                                            <div style="border: 1px solid var(--color-grey6, #ddd); border-radius: 6px; padding: 0.75rem; background: var(--color-grey1, #fff);">
+                                                <div style="font-weight: bold; margin-bottom: 0.5rem;">{{ proposal.label }}</div>
+                                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                                    <label style="cursor: pointer; color: var(--color-grass11, #2a7e3b);">
+                                                        <input type="radio" name="proposal_{{ proposal.id }}" value="yes" checked> Sí
                                                     </label>
-                                                {% endif %}
-                                                <label style="cursor: pointer; color: var(--color-red11, #ce2c31);">
-                                                    <input type="radio" name="proposal_{{ proposal.id }}" value="no"> No
-                                                </label>
+                                                    {% if not poll.disable_maybe %}
+                                                        <label style="cursor: pointer; color: var(--color-yellow11, #9e6c00);">
+                                                            <input type="radio" name="proposal_{{ proposal.id }}" value="maybe"> Tal vez
+                                                        </label>
+                                                    {% endif %}
+                                                    <label style="cursor: pointer; color: var(--color-red11, #ce2c31);">
+                                                        <input type="radio" name="proposal_{{ proposal.id }}" value="no"> No
+                                                    </label>
+                                                </div>
                                             </div>
-                                        </div>
-                                    {% endfor %}
-                                </div>
+                                        {% endfor %}
+                                    </div>
 
-                                <div style="text-align: right; margin-top: 0.5rem;">
-                                    <button type="submit" class="button button--primary" style="padding: 0.75rem 2rem; font-size: 1rem; cursor: pointer;">
-                                        Registrar mi voto
-                                    </button>
-                                </div>
-                            </form>
-                        </td>
-                    </tr>
+                                    <div style="text-align: right; margin-top: 0.5rem;">
+                                        <button type="submit" class="button button--primary" style="padding: 0.75rem 2rem; font-size: 1rem; cursor: pointer;">
+                                            Registrar mi voto
+                                        </button>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                    {% elif eligibility_errors %}
+                        <tr style="background: var(--color-yellow2, #fefce9); border-top: 2px solid var(--color-yellow8, #d5ae39);">
+                            <td colspan="{{ proposals|length|add:1 }}" style="padding: 1.5rem; text-align: left;">
+                                <h3 style="color: var(--color-yellow11, #9e6c00); margin-bottom: 0.5rem; font-size: 1.1rem;">
+                                    Requisitos de elegibilidad para votar
+                                </h3>
+                                <ul style="margin: 0.5rem 0 1rem 1.25rem; color: var(--color-yellow12, #473b1f);">
+                                    {% for err in eligibility_errors %}
+                                        <li>{{ err }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% if not user.is_authenticated %}
+                                    <a class="button button--primary" href="{% url 'login' %}?returnto={{ request.path }}" style="padding: 0.5rem 1rem; text-decoration: none;">
+                                        Iniciar sesión con Wikimedia
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
                 {% endif %}
             </tbody>
         </table>
