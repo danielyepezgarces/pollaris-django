@@ -48,3 +48,16 @@ def locale_to_bcp47(locale):
     if not locale:
         return ''
     return str(locale).replace('_', '-')
+
+
+@register.filter
+def vote_answer(vote, proposal):
+    if not vote or not proposal:
+        return None
+    if hasattr(vote, 'get_answer_for_proposal'):
+        return vote.get_answer_for_proposal(proposal)
+    if hasattr(vote, 'answers'):
+        for ans in vote.answers.all():
+            if ans.proposal_id == getattr(proposal, 'id', proposal):
+                return ans
+    return None

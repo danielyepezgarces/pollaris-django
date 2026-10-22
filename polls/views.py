@@ -288,8 +288,34 @@ def poll_view(request, slug):
     if not PollSecurity.is_authenticated(poll, request.session):
         return redirect('authenticate poll', slug=poll.slug)
 
-    proposals = poll.proposals.all().order_by('id')
-    votes = poll.votes.all().order_by('created_at').prefetch_related('answers')
+    if poll.is_date_poll:
+        dates_and_proposals = poll.get_proposals_by_dates()
+        proposals = []
+        for _, props in dates_and_proposals:
+            proposals.extend(props)
+
+        month_groups = []
+        current_month_key = None
+        for date, date_proposals in dates_and_proposals:
+            month_key = date.value.strftime('%Y-%m')
+            month_label = date.value.strftime('%B %Y')
+            if current_month_key != month_key:
+                month_groups.append({
+                    'key': month_key,
+                    'label': month_label,
+                    'date_groups': [[date, date_proposals]],
+                    'colspan': len(date_proposals),
+                })
+                current_month_key = month_key
+            else:
+                month_groups[-1]['colspan'] += len(date_proposals)
+                month_groups[-1]['date_groups'].append([date, date_proposals])
+    else:
+        dates_and_proposals = []
+        month_groups = []
+        proposals = list(poll.proposals.all().order_by('id'))
+
+    votes = poll.votes.all().order_by('created_at').prefetch_related('answers', 'owner')
     comments = poll.comments.all().order_by('created_at')
 
     # Current user's vote
@@ -372,6 +398,8 @@ def poll_view(request, slug):
     return render(request, 'polls/show.html', {
         'poll': poll,
         'proposals': proposals,
+        'dates_and_proposals': dates_and_proposals,
+        'month_groups': month_groups,
         'votes': votes,
         'comments': comments,
         'my_vote': my_vote,

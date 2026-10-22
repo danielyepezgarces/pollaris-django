@@ -18,3 +18,4 @@ sqlparse==0.6.0
 tzdata==2026.5
 urllib3==2.8.0
 PyYAML==6.0.3
+whitenoise>=6.6.0

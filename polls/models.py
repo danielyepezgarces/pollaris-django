@@ -131,6 +131,31 @@ class Poll(models.Model):
         return self.closed_at is not None and self.closed_at <= timezone.now()
 
     @property
+    def is_date_poll(self):
+        return self.type == "date"
+
+    @property
+    def is_classic_poll(self):
+        return self.type == "classic"
+
+    def get_proposals_by_dates(self):
+        dates_and_choices = {}
+        for proposal in self.proposals.select_related('date').all():
+            date = proposal.date
+            if not date or not date.value:
+                continue
+            date_key = date.value.strftime('%Y-%m-%d')
+            if date_key not in dates_and_choices:
+                dates_and_choices[date_key] = [date, []]
+            dates_and_choices[date_key][1].append(proposal)
+
+        for key in dates_and_choices:
+            dates_and_choices[key][1].sort(key=lambda p: p.id)
+
+        sorted_keys = sorted(dates_and_choices.keys())
+        return [dates_and_choices[k] for k in sorted_keys]
+
+    @property
     def cohosts(self):
         return self.pollcohost_set.all().select_related('user')
 
@@ -222,6 +247,12 @@ class Vote(models.Model):
         db_table = "vote"
         verbose_name = "Vote"
         verbose_name_plural = "Votes"
+
+    def get_answer_for_proposal(self, proposal):
+        prop_id = proposal.id if hasattr(proposal, 'id') else proposal
+        if not hasattr(self, '_answers_cache'):
+            self._answers_cache = {a.proposal_id: a for a in self.answers.all()}
+        return self._answers_cache.get(prop_id)
 
     def __str__(self):
         return f"{self.author_name} on {self.poll_id}"

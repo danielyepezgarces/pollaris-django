@@ -78,18 +78,70 @@
         <div class="proposals-table-container" data-controller="proposals-table" data-scrollbox-target="scroller">
             <table class="proposals-table">
                 <thead data-scrollbox-target="thead">
-                    <tr>
-                        <th class="proposals-table__sticky-cell" scope="col">
-                            <div class="proposals-table-actions">
-                                <span style="font-weight: bold;">Participantes</span>
-                            </div>
-                        </th>
-                        {% for proposal in proposals %}
-                            <th class="proposals-table__choice text--center" scope="col">
-                                <span class="proposals-table__choice-label">{{ proposal.label }}</span>
+                    {% if poll.is_classic_poll %}
+                        <tr>
+                            <th class="proposals-table__sticky-cell" scope="col">
+                                <div class="proposals-table-actions">
+                                    <span style="font-weight: bold;">{{ 'polls.show.participants'|trans }}</span>
+                                </div>
                             </th>
-                        {% endfor %}
-                    </tr>
+                            {% for proposal in proposals %}
+                                <th class="proposals-table__choice text--center" scope="col">
+                                    <span class="proposals-table__choice-label">{{ proposal.label }}</span>
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    {% elif poll.is_date_poll %}
+                        <tr>
+                            <th class="proposals-table__sticky-cell" scope="col"></th>
+                            {% for monthGroup in month_groups %}
+                                <th colspan="{{ monthGroup.colspan }}" scope="colgroup" class="proposals-table__month text--center">
+                                    {{ monthGroup.label }}
+                                </th>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <th class="proposals-table__sticky-cell" scope="col"></th>
+                            {% for monthGroup in month_groups %}
+                                {% for dateAndProposals in monthGroup.date_groups %}
+                                    <th colspan="{{ dateAndProposals.1|length }}" scope="colgroup" class="proposals-table__day text--center">
+                                        {{ dateAndProposals.0.value|date:"D j" }}
+                                    </th>
+                                {% endfor %}
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <th class="proposals-table__sticky-cell" scope="col">
+                                <div class="proposals-table-actions">
+                                    <span style="font-weight: bold;">{{ 'polls.show.participants'|trans }}</span>
+                                </div>
+                            </th>
+                            {% for monthGroup in month_groups %}
+                                {% for dateAndProposals in monthGroup.date_groups %}
+                                    {% for proposal in dateAndProposals.1 %}
+                                        <th scope="col" class="proposals-table__hour text--center">
+                                            <span class="proposal__label proposal__label--time">
+                                                {{ proposal.label }}
+                                            </span>
+                                        </th>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endfor %}
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <th class="proposals-table__sticky-cell" scope="col">
+                                <div class="proposals-table-actions">
+                                    <span style="font-weight: bold;">{{ 'polls.show.participants'|trans }}</span>
+                                </div>
+                            </th>
+                            {% for proposal in proposals %}
+                                <th class="proposals-table__choice text--center" scope="col">
+                                    <span class="proposals-table__choice-label">{{ proposal.label }}</span>
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    {% endif %}
                 </thead>
 
                 <tbody data-scrollbox-target="tbody">
@@ -104,7 +156,7 @@
                                         </span>
                                     {% endif %}
                                     {% if user.is_authenticated and vote.owner_id == user.id and not poll.is_closed %}
-                                        <a class="button button--icon button--extra-small" title="Modificar voto" href="{% url 'edit vote' slug=poll.slug vote_id=vote.id %}">
+                                        <a class="button button--icon button--extra-small" title="{{ 'polls.show.my_votes.edit'|trans }}" href="{% url 'edit vote' slug=poll.slug vote_id=vote.id %}">
                                             {% icon 'pen-to-square' %}
                                         </a>
                                     {% endif %}
@@ -112,27 +164,29 @@
                             </th>
 
                             {% for proposal in proposals %}
-                                <td class="text--center">
-                                    {% for answer in vote.answers.all %}
-                                        {% if answer.proposal_id == proposal.id %}
+                                {% with answer=vote|vote_answer:proposal %}
+                                    <td class="text--center">
+                                        {% if answer %}
                                             {% if answer.value == 'yes' %}
-                                                <span class="vote vote--yes" title="Sí">
+                                                <span class="vote vote--yes" title="{{ 'polls.votes.yes'|trans }}">
                                                     {% icon 'square-check' %}
                                                 </span>
                                             {% elif answer.value == 'no' %}
-                                                <span class="vote vote--no" title="No">
+                                                <span class="vote vote--no" title="{{ 'polls.votes.no'|trans }}">
                                                     {% icon 'square-xmark' %}
                                                 </span>
                                             {% elif answer.value == 'maybe' %}
-                                                <span class="vote vote--maybe" title="Tal vez">
+                                                <span class="vote vote--maybe" title="{{ 'polls.votes.maybe'|trans }}">
                                                     {% icon 'square-minus' %}
                                                 </span>
+                                            {% else %}
+                                                <span class="text--secondary">-</span>
                                             {% endif %}
+                                        {% else %}
+                                            <span class="text--secondary">-</span>
                                         {% endif %}
-                                    {% empty %}
-                                        <span class="text--secondary">-</span>
-                                    {% endfor %}
-                                </td>
+                                    </td>
+                                {% endwith %}
                             {% endfor %}
                         </tr>
                     {% empty %}
