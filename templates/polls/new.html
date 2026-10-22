@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Nueva encuesta{% endblock %}
+
+{% block content %}
+<div class="wrapper flow flow--large" style="max-width: 650px; margin: 2.5rem auto; padding: 0 1rem;">
+    <h1>Crear nueva encuesta ({% if poll_type == 'date' %}Fechas{% else %}Opciones clásicas{% endif %})</h1>
+
+    <form method="post" class="flow flow--medium">
+        {% csrf_token %}
+
+        <div class="field">
+            <label for="title" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">Título de la encuesta *</label>
+            <input type="text" name="title" id="title" required placeholder="Ej: Próxima reunión de equipo" style="width: 100%; padding: 0.6rem; border: 1px solid var(--color-grey7, #ccc); border-radius: 6px;">
+        </div>
+
+        <div class="field">
+            <label for="description" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">Descripción o detalles</label>
+            <textarea name="description" id="description" rows="3" placeholder="Contexto, agenda u objetivos..." style="width: 100%; padding: 0.6rem; border: 1px solid var(--color-grey7, #ccc); border-radius: 6px;"></textarea>
+        </div>
+
+        <div class="cols" style="display: flex; gap: 1rem;">
+            <div class="field" style="flex: 1;">
+                <label for="author_name" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">Tu nombre</label>
+                <input type="text" name="author_name" id="author_name" value="{{ user.display_name|default:'' }}" placeholder="Tu nombre o apodo" style="width: 100%; padding: 0.6rem; border: 1px solid var(--color-grey7, #ccc); border-radius: 6px;">
+            </div>
+            <div class="field" style="flex: 1;">
+                <label for="author_email" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">Tu correo</label>
+                <input type="email" name="author_email" id="author_email" value="{{ user.email|default:'' }}" placeholder="tu@correo.org" style="width: 100%; padding: 0.6rem; border: 1px solid var(--color-grey7, #ccc); border-radius: 6px;">
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="proposals_text" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
+                Propuestas / Opciones (una por línea) *
+            </label>
+            <textarea name="proposals_text" id="proposals_text" rows="5" required placeholder="Opción 1&#10;Opción 2&#10;Opción 3" style="width: 100%; padding: 0.6rem; border: 1px solid var(--color-grey7, #ccc); border-radius: 6px;"></textarea>
+            <small class="text--secondary">Escribe cada opción o fecha en una línea separada.</small>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+            <button type="submit" class="button button--primary" style="padding: 0.75rem 2rem; font-size: 1rem; cursor: pointer;">
+                Crear y publicar encuesta
+            </button>
+            <a href="{% url 'choose poll type' %}" style="margin-left: 1rem; color: var(--color-grey10, #666);">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

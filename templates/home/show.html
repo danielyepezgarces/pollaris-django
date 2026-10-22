@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio{% endblock %}
+{% block main_class %}layout__body--centered{% endblock %}
+
+{% block content %}
+<div class="flow flow--larger" style="max-width: 900px; width: 100%; text-align: center; margin: 0 auto; padding: 2rem 1rem;">
+    <div class="cols cols--gap-large" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+        <div class="col--extend flow flow--large" style="flex: 1; text-align: left;">
+            <h1 style="font-size: 2.5rem; margin-bottom: 1rem;">
+                Tomar decisiones juntos nunca fue tan fácil.
+            </h1>
+            <p class="text--primary text--big" style="font-size: 1.2rem; color: var(--color-grey11, #666);">
+                Pollaris es una herramienta para planificar eventos, organizar reuniones y tomar decisiones de forma rápida y sencilla sin necesidad de registros engorrosos.
+            </p>
+        </div>
+        <div style="flex: 1; text-align: center;">
+            <img src="/assets/calendar.png" alt="Calendario Pollaris" width="380" style="max-width: 100%; height: auto;">
+        </div>
+    </div>
+
+    <div class="home-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin: 2.5rem auto 2rem auto;">
+        <div class="stat-item" style="padding: 1rem; background: var(--color-grass2, #f5fbf5); border-radius: 8px;">
+            <span class="stat-number" style="display: block; font-size: 2.2rem; font-weight: bold; color: var(--color-primary8, #46a758);">{{ polls_count_formatted }}</span>
+            <span class="stat-label text--secondary" style="font-size: 0.9rem;">Encuestas</span>
+        </div>
+        <div class="stat-item" style="padding: 1rem; background: var(--color-grass2, #f5fbf5); border-radius: 8px;">
+            <span class="stat-number" style="display: block; font-size: 2.2rem; font-weight: bold; color: var(--color-primary8, #46a758);">{{ votes_count_formatted }}</span>
+            <span class="stat-label text--secondary" style="font-size: 0.9rem;">Votos</span>
+        </div>
+        <div class="stat-item" style="padding: 1rem; background: var(--color-grass2, #f5fbf5); border-radius: 8px;">
+            <span class="stat-number" style="display: block; font-size: 2.2rem; font-weight: bold; color: var(--color-primary8, #46a758);">{{ voters_count_formatted }}</span>
+            <span class="stat-label text--secondary" style="font-size: 0.9rem;">Participantes</span>
+        </div>
+        <div class="stat-item" style="padding: 1rem; background: var(--color-grass2, #f5fbf5); border-radius: 8px;">
+            <span class="stat-number" style="display: block; font-size: 2.2rem; font-weight: bold; color: var(--color-primary8, #46a758);">{{ comments_count_formatted }}</span>
+            <span class="stat-label text--secondary" style="font-size: 0.9rem;">Comentarios</span>
+        </div>
+    </div>
+
+    <p style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-top: 2rem;">
+        <a class="button button--primary" href="{% url 'choose poll type' %}" style="padding: 0.8rem 1.6rem; font-size: 1.1rem; text-decoration: none;">
+            Crear una encuesta
+        </a>
+        <a class="button" href="{% url 'public polls' %}" style="padding: 0.8rem 1.6rem; font-size: 1.1rem; text-decoration: none;">
+            Encuestas públicas
+        </a>
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load poll_extras %}
+
+{% block title %}{{ poll.title }}{% endblock %}
+
+{% block content %}
+<div class="wrapper flow flow--large" style="max-width: 1000px; margin: 2rem auto; padding: 0 1rem;">
+    <div class="poll-header" style="border-bottom: 1px solid var(--color-grey6, #ddd); padding-bottom: 1.5rem;">
+        <h1 style="font-size: 2.2rem; margin-bottom: 0.5rem;">{{ poll.title }}</h1>
+        <p class="text--secondary">
+            Creado por <strong>{{ poll.author_name }}</strong> &bull; {{ poll.created_at|date:"d M Y, H:i" }}
+            {% if poll.is_closed %}
+                <span class="tag tag--danger" style="background: var(--color-red3, #feebec); color: var(--color-red10, #dc3e42); padding: 0.2rem 0.6rem; border-radius: 4px; margin-left: 0.5rem;">Cerrada</span>
+            {% endif %}
+        </p>
+        {% if poll.description %}
+            <div class="poll-description" style="margin-top: 1rem; line-height: 1.5; color: var(--color-grey12, #222);">
+                {{ poll.description|linebreaks }}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Table of Proposals and Votes -->
+    <div style="overflow-x: auto; margin-top: 2rem;">
+        <table class="table" style="width: 100%; border-collapse: collapse; min-width: 600px; text-align: center;">
+            <thead>
+                <tr style="background: var(--color-grey3, #f5f5f5); border-bottom: 2px solid var(--color-grey7, #ccc);">
+                    <th style="text-align: left; padding: 0.75rem; width: 200px;">Participante</th>
+                    {% for proposal in proposals %}
+                        <th style="padding: 0.75rem; font-weight: bold;">
+                            {{ proposal.label }}
+                        </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for vote in votes %}
+                    <tr style="border-bottom: 1px solid var(--color-grey5, #e5e5e5);">
+                        <td style="text-align: left; padding: 0.75rem; font-weight: 500;">
+                            {{ vote.author_name }}
+                            {% if vote.owner %}
+                                <span title="Usuario verificado" style="color: var(--color-grass9, #46a758); display: inline-block; vertical-align: middle;">
+                                    {% icon 'circle-check' %}
+                                </span>
+                            {% endif %}
+                        </td>
+                        {% for proposal in proposals %}
+                            <td style="padding: 0.75rem;">
+                                {% for answer in vote.answers.all %}
+                                    {% if answer.proposal_id == proposal.id %}
+                                        {% if answer.value == 'yes' %}
+                                            <span style="color: var(--color-grass11, #2a7e3b); display: inline-block; vertical-align: middle;" title="Sí">
+                                                {% icon 'square-check' %}
+                                            </span>
+                                        {% elif answer.value == 'maybe' %}
+                                            <span style="color: var(--color-yellow11, #9e6c00); display: inline-block; vertical-align: middle;" title="Tal vez">
+                                                {% icon 'square-minus' %}
+                                            </span>
+                                        {% elif answer.value == 'no' %}
+                                            <span style="color: var(--color-red11, #ce2c31); display: inline-block; vertical-align: middle;" title="No">
+                                                {% icon 'square-xmark' %}
+                                            </span>
+                                        {% else %}
+                                            <span style="color: #bbb;">-</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% empty %}
+                                    <span style="color: #bbb;">-</span>
+                                {% endfor %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="{{ proposals|length|add:1 }}" style="padding: 1.5rem; color: #888; font-style: italic;">
+                            Aún no hay votos registrados. ¡Sé el primero en votar abajo!
+                        </td>
+                    </tr>
+                {% endfor %}
+
+                <!-- Totals row -->
+                <tr style="background: var(--color-grass2, #f5fbf5); font-weight: bold; border-top: 2px solid var(--color-grass8, #65ba74); border-bottom: 2px solid var(--color-grass8, #65ba74);">
+                    <td style="text-align: left; padding: 0.75rem;">Total votos a favor</td>
+                    {% for proposal in proposals %}
+                        <td style="padding: 0.75rem; color: var(--color-grass11, #2a7e3b);">
+                            {% for prop_id, data in results.items %}
+                                {% if prop_id == proposal.id %}
+                                    {{ data.yes }}
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Voting Form Row -->
+                {% if not poll.is_closed %}
+                    <tr style="background: #ffffff; border-top: 2px solid var(--color-primary8, #46a758);">
+                        <td colspan="{{ proposals|length|add:1 }}" style="padding: 1.5rem 0.75rem 0 0.75rem;">
+                            <form method="post" style="display: flex; flex-direction: column; gap: 1rem;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="vote">
+
+                                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                                    <label for="author_name" style="font-weight: bold;">Tu nombre:</label>
+                                    <input type="text" name="author_name" id="author_name" required value="{{ user.display_name|default:'' }}" placeholder="Tu nombre..." style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 200px;">
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: repeat({{ proposals|length }}, 1fr); gap: 1rem; margin-top: 0.5rem; text-align: center;">
+                                    {% for proposal in proposals %}
+                                        <div style="border: 1px solid var(--color-grey6, #ddd); border-radius: 6px; padding: 0.75rem; background: var(--color-grey1, #fff);">
+                                            <div style="font-weight: bold; margin-bottom: 0.5rem;">{{ proposal.label }}</div>
+                                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                                <label style="cursor: pointer; color: var(--color-grass11, #2a7e3b);">
+                                                    <input type="radio" name="proposal_{{ proposal.id }}" value="yes" checked> Sí
+                                                </label>
+                                                {% if not poll.disable_maybe %}
+                                                    <label style="cursor: pointer; color: var(--color-yellow11, #9e6c00);">
+                                                        <input type="radio" name="proposal_{{ proposal.id }}" value="maybe"> Tal vez
+                                                    </label>
+                                                {% endif %}
+                                                <label style="cursor: pointer; color: var(--color-red11, #ce2c31);">
+                                                    <input type="radio" name="proposal_{{ proposal.id }}" value="no"> No
+                                                </label>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+
+                                <div style="text-align: right; margin-top: 0.5rem;">
+                                    <button type="submit" class="button button--primary" style="padding: 0.75rem 2rem; font-size: 1rem; cursor: pointer;">
+                                        Registrar mi voto
+                                    </button>
+                                </div>
+                            </form>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="comments-section" style="margin-top: 3rem; border-top: 1px solid var(--color-grey6, #ddd); padding-top: 1.5rem;">
+        <h2>Comentarios ({{ comments|length }})</h2>
+
+        <div class="comments-list flow flow--medium" style="margin-top: 1rem;">
+            {% for comment in comments %}
+                <div class="comment-item" style="background: var(--color-grey2, #fafafa); border: 1px solid var(--color-grey5, #eee); border-radius: 6px; padding: 1rem; margin-bottom: 0.75rem;">
+                    <div style="font-weight: bold; margin-bottom: 0.25rem;">
+                        {{ comment.author_name }}
+                        <span class="text--secondary" style="font-size: 0.85em; font-weight: normal; margin-left: 0.5rem;">{{ comment.created_at|date:"d M Y, H:i" }}</span>
+                    </div>
+                    <div>{{ comment.content|linebreaks }}</div>
+                </div>
+            {% empty %}
+                <p class="text--secondary">No hay comentarios en esta encuesta.</p>
+            {% endfor %}
+        </div>
+
+        {% if not poll.is_closed %}
+            <form method="post" style="margin-top: 1.5rem;" class="flow flow--small">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="comment">
+                <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                    <input type="text" name="author_name" value="{{ user.display_name|default:'' }}" placeholder="Tu nombre..." style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 200px;">
+                </div>
+                <textarea name="content" rows="3" required placeholder="Escribe un comentario..." style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"></textarea>
+                <button type="submit" class="button" style="padding: 0.5rem 1.2rem; cursor: pointer; margin-top: 0.5rem;">
+                    Publicar comentario
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

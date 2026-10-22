@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load poll_extras %}
+
+{% block title %}Elegir tipo de encuesta{% endblock %}
+
+{% block content %}
+<div class="wrapper flow flow--large" style="max-width: 700px; margin: 3rem auto; padding: 0 1rem; text-align: center;">
+    <h1>¿Qué tipo de encuesta deseas crear?</h1>
+    <p class="text--secondary">Elige el formato que mejor se adapte a tu objetivo.</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+        <a href="{% url 'new poll' %}?type=date" style="text-decoration: none; color: inherit; padding: 2rem; border: 2px solid var(--color-primary7, #94ce9a); border-radius: 12px; background: var(--color-grass1, #fff); transition: transform 0.2s;">
+            <div style="margin-bottom: 0.75rem;">{% icon 'calendar-check' %}</div>
+            <h2 style="margin-bottom: 0.5rem;">Fechas / Horarios</h2>
+            <p class="text--secondary">Encuentra la mejor fecha o momento para una reunión, evento o llamada.</p>
+        </a>
+
+        <a href="{% url 'new poll' %}?type=classic" style="text-decoration: none; color: inherit; padding: 2rem; border: 2px solid var(--color-primary7, #94ce9a); border-radius: 12px; background: var(--color-grass1, #fff); transition: transform 0.2s;">
+            <div style="margin-bottom: 0.75rem;">{% icon 'chart-simple' %}</div>
+            <h2 style="margin-bottom: 0.5rem;">Opciones clásicas</h2>
+            <p class="text--secondary">Toma una decisión entre múltiples opciones, nombres o propuestas.</p>
+        </a>
+    </div>
+</div>
+{% endblock %}

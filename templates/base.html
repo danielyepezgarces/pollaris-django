@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+{% load poll_extras %}
+<html lang="es" data-controller="color-scheme" data-color-scheme="auto">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}{% endblock %} – Pollaris</title>
+    <meta name="description" content="{% block meta_description %}Pollaris es una herramienta para planificar, organizar y tomar decisiones de forma rápida y sencilla.{% endblock %}">
+
+    <link rel="stylesheet" href="/assets/styles/application.css">
+    <link rel="stylesheet" href="/assets/home/application.css">
+
+    <script src="/assets/js/application.js" defer></script>
+</head>
+<body>
+    <div class="layout" id="layout">
+        <header class="layout__header header no-print" role="banner" data-controller="nav-toggle">
+            <div class="header__brand">
+                <a class="header__title" href="{% url 'home' %}">
+                    Pollaris
+                </a>
+                <button
+                    class="header__hamburger"
+                    type="button"
+                    data-action="click->nav-toggle#toggle"
+                    data-nav-toggle-target="button"
+                    aria-expanded="false"
+                    aria-label="Menu"
+                >
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+
+            <nav class="header__nav" data-nav-toggle-target="nav">
+                <div class="header__links">
+                    <a class="header__link" href="{% url 'public polls' %}">Encuestas públicas</a>
+                    <a class="header__link" href="{% url 'choose poll type' %}">Crear encuesta</a>
+                    {% if user.is_staff %}
+                        <a class="header__link" href="/admin/">Panel Django</a>
+                    {% endif %}
+                </div>
+
+                <div class="header__actions">
+                    {% if user.is_authenticated %}
+                        <span class="text--secondary text--small">{{ user.display_name }}</span>
+                    {% else %}
+                        <a class="button header__button button--small" href="/admin/login/">
+                            Iniciar sesión
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+        </header>
+
+        {% if messages %}
+            <div class="wrapper flow no-print" style="margin-top: 1.5rem; max-width: 900px; margin-left: auto; margin-right: auto; padding: 0 1rem;">
+                {% for message in messages %}
+                    <p role="alert" class="panel panel--rounded" style="text-align: center; margin: 0.5rem 0; padding: 0.75rem; background: var(--color-grass3, #e9f6e9); border: 1px solid var(--color-grass8, #65ba74);">
+                        {{ message }}
+                    </p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <main class="layout__body {% block main_class %}{% endblock %}" id="content" tabindex="-1">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>
