@@ -3,9 +3,10 @@ import hashlib
 import hmac
 import json
 import os
+import secrets
+import time
 import urllib.parse
 import requests
-from requests_oauthlib import OAuth1
 from django.conf import settings
 from polls.models import User, generate_hex_id
 
@@ -23,7 +24,7 @@ class WikimediaOAuth:
         self.app_base_url = os.getenv('APP_BASE_URL', 'https://pollaris.toolforge.org')
         self.user_agent = os.getenv(
             'WIKIMEDIA_OAUTH_USER_AGENT',
-            f"{self.app_name}/1.1.3 ({self.app_base_url}; Wikimedia OAuth login)"
+            f"{self.app_name}/2.0.0 ({self.app_base_url}; Wikimedia OAuth login)"
         )
 
     def is_configured(self) -> bool:
@@ -38,6 +39,57 @@ class WikimediaOAuth:
         if base.endswith('/wiki/Special:OAuth'):
             return base[:-len('/wiki/Special:OAuth')] + '/w/index.php'
         return f"{base}/w/index.php"
+
+    def _rawurlencode(self, val: str) -> str:
+        return urllib.parse.quote(str(val), safe='~')
+
+    def send_signed_request(
+        self,
+        method: str,
+        query_params: dict,
+        token_secret: str = '',
+        auth_overrides: dict = None
+    ) -> str:
+        auth_params = {
+            'oauth_consumer_key': self.client_id,
+            'oauth_nonce': secrets.token_hex(16),
+            'oauth_signature_method': 'HMAC-SHA1',
+            'oauth_timestamp': str(int(time.time())),
+            'oauth_version': '1.0',
+        }
+        if auth_overrides:
+            auth_params.update(auth_overrides)
+
+        all_params = {**auth_params, **query_params}
+        sorted_pairs = sorted([(self._rawurlencode(k), self._rawurlencode(v)) for k, v in all_params.items()])
+        normalized_params = '&'.join(f"{k}={v}" for k, v in sorted_pairs)
+
+        signature_base = '&'.join([
+            method.upper(),
+            self._rawurlencode(self.get_index_php_url()),
+            self._rawurlencode(normalized_params)
+        ])
+
+        signing_key = f"{self._rawurlencode(self.client_secret)}&{self._rawurlencode(token_secret)}"
+        signature = base64.b64encode(
+            hmac.new(signing_key.encode('utf-8'), signature_base.encode('utf-8'), hashlib.sha1).digest()
+        ).decode('utf-8')
+
+        auth_params['oauth_signature'] = signature
+
+        auth_header = 'OAuth ' + ', '.join([
+            f'{self._rawurlencode(k)}="{self._rawurlencode(v)}"'
+            for k, v in auth_params.items()
+        ])
+
+        headers = {
+            'Authorization': auth_header,
+            'User-Agent': self.user_agent,
+        }
+
+        res = requests.get(self.get_index_php_url(), params=query_params, headers=headers, timeout=15)
+        res.raise_for_status()
+        return res.text
 
     def build_authorization_url(self, session) -> str:
         token = self.fetch_request_token()
@@ -77,66 +129,38 @@ class WikimediaOAuth:
         return self.identify(access_token['key'], access_token['secret'])
 
     def fetch_request_token(self) -> dict:
-        auth = OAuth1(
-            self.client_id,
-            client_secret=self.client_secret,
-            callback_uri='oob',
-            signature_type='auth_header'
-        )
-        url = self.get_index_php_url()
-        params = {
+        query_params = {
             'title': 'Special:OAuth/initiate',
             'format': 'json',
             'oauth_callback': 'oob',
         }
-        headers = {'User-Agent': self.user_agent}
-
-        res = requests.get(url, params=params, auth=auth, headers=headers, timeout=10)
-        res.raise_for_status()
-
-        payload = self.parse_token_response(res.text)
+        res_text = self.send_signed_request('GET', query_params)
+        payload = self.parse_token_response(res_text)
         return self.extract_token_pair(payload, 'request')
 
     def fetch_access_token(self, request_token: str, request_token_secret: str, oauth_verifier: str) -> dict:
-        auth = OAuth1(
-            self.client_id,
-            client_secret=self.client_secret,
-            resource_owner_key=request_token,
-            resource_owner_secret=request_token_secret,
-            verifier=oauth_verifier,
-            signature_type='auth_header'
-        )
-        url = self.get_index_php_url()
-        params = {
+        query_params = {
             'title': 'Special:OAuth/token',
             'format': 'json',
         }
-        headers = {'User-Agent': self.user_agent}
-
-        res = requests.get(url, params=params, auth=auth, headers=headers, timeout=10)
-        res.raise_for_status()
-
-        payload = self.parse_token_response(res.text)
+        auth_overrides = {
+            'oauth_token': request_token,
+            'oauth_verifier': oauth_verifier,
+        }
+        res_text = self.send_signed_request('GET', query_params, token_secret=request_token_secret, auth_overrides=auth_overrides)
+        payload = self.parse_token_response(res_text)
         return self.extract_token_pair(payload, 'access')
 
     def identify(self, access_token: str, access_token_secret: str) -> dict:
-        auth = OAuth1(
-            self.client_id,
-            client_secret=self.client_secret,
-            resource_owner_key=access_token,
-            resource_owner_secret=access_token_secret,
-            signature_type='auth_header'
-        )
-        url = self.get_index_php_url()
-        params = {
+        query_params = {
             'title': 'Special:OAuth/identify',
         }
-        headers = {'User-Agent': self.user_agent}
+        auth_overrides = {
+            'oauth_token': access_token,
+        }
+        res_text = self.send_signed_request('GET', query_params, token_secret=access_token_secret, auth_overrides=auth_overrides)
 
-        res = requests.get(url, params=params, auth=auth, headers=headers, timeout=10)
-        res.raise_for_status()
-
-        jwt_raw = res.text.strip()
+        jwt_raw = res_text.strip()
         payload = self.decode_identity_jwt(jwt_raw)
         payload['username'] = payload.get('username')
         payload['sub'] = str(payload.get('sub') or payload.get('username') or '')
@@ -151,7 +175,7 @@ class WikimediaOAuth:
             data = json.loads(text)
             if isinstance(data, dict):
                 if 'error' in data:
-                    raise RuntimeError(str(data['error']))
+                    raise RuntimeError(str(data.get('message') or data['error']))
                 return data
         except json.JSONDecodeError:
             pass
