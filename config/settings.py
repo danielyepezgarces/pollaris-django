@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -134,7 +135,14 @@ if db_name and (not db_user or not db_password):
             except Exception:
                 pass
 
-if db_name:
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+elif db_name:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',

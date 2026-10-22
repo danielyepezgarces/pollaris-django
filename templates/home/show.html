@@ -1,50 +1,99 @@
 {% extends 'base.html' %}
+{% load poll_extras %}
 
-{% block title %}Inicio{% endblock %}
+{% block title_full %}{% trans_msg 'base.default_title' appName=appName %}{% endblock %}
+
+{% block meta_description %}{{ 'home.intro'|trans }}{% endblock %}
+
+{% block social_image %}/assets/screenshot.webp{% endblock %}
+
+{% block social_image_alt %}{{ 'home.title'|trans }}{% endblock %}
+
 {% block main_class %}layout__body--centered{% endblock %}
 
-{% block content %}
-<div class="flow flow--larger" style="max-width: 900px; width: 100%; text-align: center; margin: 0 auto; padding: 2rem 1rem;">
-    <div class="cols cols--gap-large" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
-        <div class="col--extend flow flow--large" style="flex: 1; text-align: left;">
-            <h1 style="font-size: 2.5rem; margin-bottom: 1rem;">
-                Tomar decisiones juntos nunca fue tan fácil.
-            </h1>
-            <p class="text--primary text--big" style="font-size: 1.2rem; color: var(--color-grey11, #666);">
-                Pollaris es una herramienta para planificar eventos, organizar reuniones y tomar decisiones de forma rápida y sencilla sin necesidad de registros engorrosos.
+{% block header %}
+    {{ block.super }}
+
+    {% if user.is_authenticated %}
+        <div class="wrapper wrapper--center home-welcome">
+            <p class="text--primary text--bold">
+                {% trans_msg 'home.welcome' name=user.display_name %}
             </p>
         </div>
-        <div style="flex: 1; text-align: center;">
-            <img src="/assets/calendar.png" alt="Calendario Pollaris" width="380" style="max-width: 100%; height: auto;">
-        </div>
-    </div>
+    {% endif %}
+{% endblock %}
 
-    <div class="home-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin: 2.5rem auto 2rem auto;">
-        <div class="stat-item" style="padding: 1rem; background: var(--color-grass2, #f5fbf5); border-radius: 8px;">
-            <span class="stat-number" style="display: block; font-size: 2.2rem; font-weight: bold; color: var(--color-primary8, #46a758);">{{ polls_count_formatted }}</span>
-            <span class="stat-label text--secondary" style="font-size: 0.9rem;">Encuestas</span>
-        </div>
-        <div class="stat-item" style="padding: 1rem; background: var(--color-grass2, #f5fbf5); border-radius: 8px;">
-            <span class="stat-number" style="display: block; font-size: 2.2rem; font-weight: bold; color: var(--color-primary8, #46a758);">{{ votes_count_formatted }}</span>
-            <span class="stat-label text--secondary" style="font-size: 0.9rem;">Votos</span>
-        </div>
-        <div class="stat-item" style="padding: 1rem; background: var(--color-grass2, #f5fbf5); border-radius: 8px;">
-            <span class="stat-number" style="display: block; font-size: 2.2rem; font-weight: bold; color: var(--color-primary8, #46a758);">{{ voters_count_formatted }}</span>
-            <span class="stat-label text--secondary" style="font-size: 0.9rem;">Participantes</span>
-        </div>
-        <div class="stat-item" style="padding: 1rem; background: var(--color-grass2, #f5fbf5); border-radius: 8px;">
-            <span class="stat-number" style="display: block; font-size: 2.2rem; font-weight: bold; color: var(--color-primary8, #46a758);">{{ comments_count_formatted }}</span>
-            <span class="stat-label text--secondary" style="font-size: 0.9rem;">Comentarios</span>
-        </div>
-    </div>
+{% block content %}
+    <div class="flow flow--larger" style="max-width: 900px; width: 100%; text-align: center;">
 
-    <p style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-top: 2rem;">
-        <a class="button button--primary" href="{% url 'choose poll type' %}" style="padding: 0.8rem 1.6rem; font-size: 1.1rem; text-decoration: none;">
-            Crear una encuesta
-        </a>
-        <a class="button" href="{% url 'public polls' %}" style="padding: 0.8rem 1.6rem; font-size: 1.1rem; text-decoration: none;">
-            Encuestas públicas
-        </a>
-    </p>
-</div>
+        {% if messages %}
+            {% for message in messages %}
+                <p role="alert" class="panel panel--rounded panel--success" style="text-align: center; margin-bottom: 1.5rem;">
+                    {{ message }}
+                </p>
+            {% endfor %}
+        {% endif %}
+
+        <div class="cols cols--gap-large" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+            <div class="col--extend flow flow--large" style="flex: 1; text-align: left;">
+                <h1>
+                    {{ 'home.title'|trans }}
+                </h1>
+
+                <p class="text--primary text--big">
+                    {{ 'home.intro'|trans }}
+                </p>
+            </div>
+
+            <div style="flex: 1; text-align: center;">
+                <img
+                    alt=""
+                    src="/assets/calendar.png"
+                    fetchpriority="high"
+                    decoding="async"
+                    width="403"
+                    height="261"
+                    style="max-width: 100%; height: auto;"
+                >
+            </div>
+        </div>
+
+        <div class="home-stats">
+            <div class="stat-item">
+                <span class="stat-number">{{ polls_count_formatted }}</span>
+                <span class="stat-label text--secondary">{% trans_msg 'home.stats.polls' count=polls_count %}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ votes_count_formatted }}</span>
+                <span class="stat-label text--secondary">{% trans_msg 'home.stats.votes' count=votes_count %}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ voters_count_formatted }}</span>
+                <span class="stat-label text--secondary">{% trans_msg 'home.stats.participants' count=voters_count %}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ comments_count_formatted }}</span>
+                <span class="stat-label text--secondary">{% trans_msg 'home.stats.comments' count=comments_count %}</span>
+            </div>
+        </div>
+
+        <p class="cols cols--center cols--gap" style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+            <a class="button button--primary" href="{% url 'choose poll type' %}">
+                {{ 'home.create_poll'|trans }}
+            </a>
+
+            <a class="button" href="{% url 'public polls' %}">
+                {{ 'home.public_polls'|trans }}
+            </a>
+
+            <a class="button" href="{% url 'my' %}">
+                {{ 'home.my_polls_and_votes'|trans }}
+            </a>
+        </p>
+
+        <p class="text--secondary" style="text-align: center; font-size: 0.9em;">
+            {{ 'home.credits'|trans|safe }}
+        </p>
+
+    </div>
 {% endblock %}

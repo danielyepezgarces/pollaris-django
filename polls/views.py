@@ -54,6 +54,14 @@ def home_view(request):
         'voters_count_formatted': format_number_short(voters_count),
         'comments_count': comments_count,
         'comments_count_formatted': format_number_short(comments_count),
+        'pollsCount': polls_count,
+        'pollsCountFormatted': format_number_short(polls_count),
+        'votesCount': votes_count,
+        'votesCountFormatted': format_number_short(votes_count),
+        'votersCount': voters_count,
+        'votersCountFormatted': format_number_short(voters_count),
+        'commentsCount': comments_count,
+        'commentsCountFormatted': format_number_short(comments_count),
     })
 
 

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}{% endblock %} – {{ appName }}</title>
+    <title>{% block title_full %}{% block title %}{% endblock %} – {{ appName }}{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}{% trans_msg 'base.default_title' appName=appName %}{% endblock %}">
 
     <link rel="stylesheet" href="/assets/styles/application.css">
@@ -14,6 +14,7 @@
 </head>
 <body>
     <div class="layout" id="layout">
+        {% block header %}
         <header class="layout__header header no-print" role="banner" data-controller="nav-toggle">
             <div class="header__brand">
                 <a class="header__title" href="{% url 'home' %}">
@@ -56,6 +57,7 @@
                 </div>
             </nav>
         </header>
+        {% endblock %}
 
         {% if messages %}
             <div class="wrapper flow no-print" style="margin-top: 1.5rem; max-width: 900px; margin-left: auto; margin-right: auto; padding: 0 1rem;">
