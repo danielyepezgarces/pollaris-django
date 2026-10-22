@@ -113,16 +113,19 @@ db_port = os.getenv('DB_PORT', '3306')
 
 if database_url:
     parsed_db = urlparse(database_url)
-    if parsed_db.path and parsed_db.path != '/':
-        db_name = parsed_db.path.lstrip('/')
-    if parsed_db.username:
-        db_user = parsed_db.username
-    if parsed_db.password:
-        db_password = parsed_db.password
-    if parsed_db.hostname:
-        db_host = parsed_db.hostname
-    if parsed_db.port:
-        db_port = str(parsed_db.port)
+    if parsed_db.scheme == 'sqlite':
+        db_name = None
+    else:
+        if parsed_db.path and parsed_db.path != '/':
+            db_name = parsed_db.path.lstrip('/')
+        if parsed_db.username:
+            db_user = parsed_db.username
+        if parsed_db.password:
+            db_password = parsed_db.password
+        if parsed_db.hostname:
+            db_host = parsed_db.hostname
+        if parsed_db.port:
+            db_port = str(parsed_db.port)
 
 if db_name and (not db_user or not db_password):
     for cnf_path in [Path.home() / 'replica.my.cnf', Path.home() / '.my.cnf']:

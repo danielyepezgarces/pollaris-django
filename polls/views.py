@@ -5,7 +5,8 @@ import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, Http404, JsonResponse
 from django.core.paginator import Paginator
-from django.db.models import Count
+from django.db import models
+from django.db.models import Count, Q
 from django.contrib import messages
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.utils import timezone
@@ -282,7 +283,9 @@ def edit_poll_descriptions_view(request, id, token):
 # --- Poll View & Voting ---
 
 def poll_view(request, slug):
-    poll = get_object_or_404(Poll, slug=slug)
+    poll = Poll.objects.filter(models.Q(slug=slug) | models.Q(id=slug)).first()
+    if not poll:
+        raise Http404("Poll does not exist")
 
     # 1. Check full password protection
     if not PollSecurity.is_authenticated(poll, request.session):
@@ -293,6 +296,9 @@ def poll_view(request, slug):
         proposals = []
         for _, props in dates_and_proposals:
             proposals.extend(props)
+
+        if not proposals:
+            proposals = list(poll.proposals.all().order_by('id'))
 
         month_groups = []
         current_month_key = None
@@ -315,8 +321,10 @@ def poll_view(request, slug):
         month_groups = []
         proposals = list(poll.proposals.all().order_by('id'))
 
-    votes = poll.votes.all().order_by('created_at').prefetch_related('answers', 'owner')
+    votes = Vote.objects.filter(models.Q(poll=poll) | models.Q(poll_id=poll.id)).order_by('created_at').prefetch_related('answers', 'owner')
     comments = poll.comments.all().order_by('created_at')
+    can_view_results = poll.are_results_public or poll.can_administer(request.user)
+    poll_votes_count = poll.votes.count()
 
     # Current user's vote
     my_vote = None
@@ -406,6 +414,8 @@ def poll_view(request, slug):
         'results': results,
         'preferred_choices': poll.preferred_choices,
         'can_vote': can_vote,
+        'can_view_results': can_view_results,
+        'poll_votes_count': poll_votes_count,
         'eligibility_errors': eligibility_errors,
     })
 

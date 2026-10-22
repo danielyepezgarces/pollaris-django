@@ -3,6 +3,10 @@
 
 {% block title_full %}{% trans_msg 'base.default_title' appName=appName %}{% endblock %}
 
+{% block extra_head %}
+    <link rel="stylesheet" href="/assets/home/application.css">
+{% endblock %}
+
 {% block meta_description %}{{ 'home.intro'|trans }}{% endblock %}
 
 {% block social_image %}/assets/screenshot.webp{% endblock %}

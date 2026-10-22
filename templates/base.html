@@ -8,11 +8,11 @@
     <meta name="description" content="{% block meta_description %}{% trans_msg 'base.default_title' appName=appName %}{% endblock %}">
 
     <link rel="stylesheet" href="/assets/styles/application.css">
-    <link rel="stylesheet" href="/assets/home/application.css">
+    {% block extra_head %}{% endblock %}
 
     <script src="/assets/js/application.js" defer></script>
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
     <div class="layout" id="layout">
         {% block header %}
         <header class="layout__header header no-print" role="banner" data-controller="nav-toggle">
