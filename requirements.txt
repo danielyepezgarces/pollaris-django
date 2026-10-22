@@ -3,7 +3,7 @@ certifi==2026.10.19
 cffi==2.1.1
 charset-normalizer==3.5.2
 cryptography==50.0.2
-Django==6.1.2
+Django>=5.2,<6.2
 gunicorn==26.2.0
 idna==3.20
 oauthlib==4.0.0
