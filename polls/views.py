@@ -3,7 +3,7 @@ import io
 import json
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, JsonResponse
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.contrib import messages
@@ -368,6 +368,7 @@ def poll_view(request, slug):
         'comments': comments,
         'my_vote': my_vote,
         'results': results,
+        'preferred_choices': poll.preferred_choices,
         'can_vote': can_vote,
         'eligibility_errors': eligibility_errors,
     })
@@ -552,3 +553,85 @@ def logout_view(request):
     auth_logout(request)
     messages.success(request, 'Has cerrado sesión exitosamente.')
     return redirect('home')
+
+
+# --- Phase 3 Views: Cohosts, My Section, and Preferences ---
+
+def my_view(request):
+    if not request.user.is_authenticated:
+        return render(request, 'my/index.html')
+
+    owned_polls = Poll.objects.filter(owner=request.user).order_by('-created_at')
+    cohosted_polls = Poll.objects.filter(pollcohost__user=request.user).exclude(owner=request.user).order_by('-created_at')
+    user_votes = Vote.objects.filter(owner=request.user).select_related('poll').order_by('-created_at')
+
+    return render(request, 'my/index.html', {
+        'owned_polls': owned_polls,
+        'cohosted_polls': cohosted_polls,
+        'user_votes': user_votes,
+    })
+
+
+def user_search_view(request):
+    if not request.user.is_authenticated:
+        return JsonResponse([], safe=False)
+
+    q = request.GET.get('q', '').strip()
+    if not q:
+        return JsonResponse([], safe=False)
+
+    users = User.objects.filter(username__icontains=q)[:20]
+    results = [
+        {'username': u.username, 'displayName': u.display_name}
+        for u in users
+    ]
+    return JsonResponse(results, safe=False)
+
+
+def poll_cohosts_view(request, id, token):
+    poll = get_object_or_404(Poll, id=id, admin_token=token)
+
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        right = request.POST.get('right', 'edit')
+        if right not in ('edit', 'full'):
+            right = 'edit'
+
+        user = User.objects.filter(username=username).first()
+        if not user:
+            messages.error(request, f"No se encontró ningún usuario con el nombre '{username}'.")
+        elif user.id == poll.owner_id:
+            messages.error(request, "El creador principal ya es propietario de la encuesta.")
+        else:
+            cohost, created = PollCohost.objects.get_or_create(poll=poll, user=user)
+            cohost.cohost_right = right
+            cohost.save()
+            messages.success(request, f"Usuario '{user.display_name}' agregado como co-anfitrión.")
+            return redirect('poll cohosts', id=poll.id, token=poll.admin_token)
+
+    cohosts = PollCohost.objects.filter(poll=poll).select_related('user')
+    return render(request, 'polls/cohosts.html', {
+        'poll': poll,
+        'cohosts': cohosts,
+    })
+
+
+def poll_remove_cohost_view(request, id, token, user_id):
+    poll = get_object_or_404(Poll, id=id, admin_token=token)
+    PollCohost.objects.filter(poll=poll, user_id=user_id).delete()
+    messages.success(request, 'Co-anfitrión eliminado.')
+    return redirect('poll cohosts', id=poll.id, token=poll.admin_token)
+
+
+def preferences_view(request):
+    if request.method == 'POST':
+        locale = request.POST.get('locale', 'es')
+        request.session['_locale'] = locale
+        messages.success(request, 'Preferencias guardadas.')
+        referrer = request.META.get('HTTP_REFERER') or '/'
+        return redirect(referrer)
+
+    current_locale = request.session.get('_locale', 'es')
+    return render(request, 'preferences/edit.html', {
+        'current_locale': current_locale,
+    })

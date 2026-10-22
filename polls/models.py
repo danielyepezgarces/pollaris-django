@@ -130,6 +130,42 @@ class Poll(models.Model):
     def is_closed(self):
         return self.closed_at is not None and self.closed_at <= timezone.now()
 
+    @property
+    def cohosts(self):
+        return self.pollcohost_set.all().select_related('user')
+
+    @property
+    def preferred_choices(self):
+        max_yes = 0
+        preferred = []
+        for prop in self.proposals.all():
+            count_yes = prop.answers.filter(value='yes').count()
+            if count_yes == 0:
+                continue
+            if count_yes > max_yes:
+                max_yes = count_yes
+                preferred = [prop]
+            elif count_yes == max_yes:
+                preferred.append(prop)
+        return preferred
+
+    def get_authors_display(self):
+        authors = [self.author_name]
+        for ch in self.cohosts:
+            authors.append(ch.user.display_name)
+        if len(authors) == 1:
+            return authors[0]
+        return ", ".join(authors[:-1]) + " y " + authors[-1]
+
+    def can_administer(self, user):
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_superuser or user.is_staff:
+            return True
+        if self.owner_id == user.id:
+            return True
+        return self.pollcohost_set.filter(user=user, cohost_right='full').exists()
+
 
 class Date(models.Model):
     id = models.AutoField(primary_key=True)

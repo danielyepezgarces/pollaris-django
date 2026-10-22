@@ -35,17 +35,21 @@
                 <div class="header__links">
                     <a class="header__link" href="{% url 'public polls' %}">Encuestas públicas</a>
                     <a class="header__link" href="{% url 'choose poll type' %}">Crear encuesta</a>
+                    <a class="header__link" href="{% url 'my' %}">Mis encuestas</a>
                     {% if user.is_staff %}
                         <a class="header__link" href="/admin/">Panel Django</a>
                     {% endif %}
                 </div>
 
                 <div class="header__actions">
+                    <a class="button header__button button--small button--ghost" href="{% url 'edit preferences' %}" style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                        {% icon 'gear' %} Preferencias
+                    </a>
                     {% if user.is_authenticated %}
-                        <span class="text--secondary text--small">{{ user.display_name }}</span>
+                        <span class="text--secondary text--small" style="margin-left: 0.5rem;">{{ user.display_name }}</span>
                         <a class="button header__button button--small" href="{% url 'logout' %}" style="margin-left: 0.5rem;">Cerrar sesión</a>
                     {% else %}
-                        <a class="button header__button button--small" href="{% url 'login' %}?returnto={{ request.path }}">
+                        <a class="button header__button button--small" href="{% url 'login' %}?returnto={{ request.path }}" style="margin-left: 0.5rem;">
                             Iniciar sesión
                         </a>
                     {% endif %}

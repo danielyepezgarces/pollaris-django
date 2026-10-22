@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load poll_extras %}
+
+{% block title %}Preferencias{% endblock %}
+
+{% block content %}
+<div class="wrapper flow flow--large" style="max-width: 550px; margin: 3rem auto; padding: 0 1rem;">
+    <h1>Preferencias</h1>
+    <p class="text--secondary">Personaliza el idioma y la visualización de Pollaris.</p>
+
+    <div style="background: var(--color-grey1, #fff); border: 1px solid var(--color-grey6, #ddd); border-radius: 8px; padding: 2rem;" class="flow flow--medium">
+        <form method="post" class="flow flow--medium">
+            {% csrf_token %}
+
+            <div class="field">
+                <label for="locale" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
+                    Idioma preferido
+                </label>
+                <select name="locale" id="locale" style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="es" {% if current_locale == 'es' %}selected{% endif %}>Español</option>
+                    <option value="en" {% if current_locale == 'en' %}selected{% endif %}>English</option>
+                    <option value="fr" {% if current_locale == 'fr' %}selected{% endif %}>Français</option>
+                    <option value="de" {% if current_locale == 'de' %}selected{% endif %}>Deutsch</option>
+                    <option value="it" {% if current_locale == 'it' %}selected{% endif %}>Italiano</option>
+                    <option value="pt" {% if current_locale == 'pt' %}selected{% endif %}>Português</option>
+                    <option value="ca" {% if current_locale == 'ca' %}selected{% endif %}>Català</option>
+                    <option value="eo" {% if current_locale == 'eo' %}selected{% endif %}>Esperanto</option>
+                </select>
+            </div>
+
+            <div class="field" style="margin-top: 1rem;">
+                <label for="color_scheme" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
+                    Tema visual
+                </label>
+                <select name="color_scheme" id="color_scheme" style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="auto">Automático (según el sistema)</option>
+                    <option value="light">Modo claro</option>
+                    <option value="dark">Modo oscuro</option>
+                </select>
+            </div>
+
+            <div style="margin-top: 2rem;">
+                <button type="submit" class="button button--primary" style="padding: 0.75rem 2rem; cursor: pointer; width: 100%;">
+                    Guardar preferencias
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

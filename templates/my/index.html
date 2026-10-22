@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load poll_extras %}
+
+{% block title %}Mis encuestas y votos{% endblock %}
+
+{% block content %}
+<div class="wrapper wrapper--small wrapper--center flow flow--larger" style="max-width: 800px; margin: 2.5rem auto; padding: 0 1rem;">
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <h1 style="margin: 0;">Mis encuestas y votos</h1>
+        <span style="color: var(--color-primary8, #46a758);">{% icon 'thumbtack' %}</span>
+    </div>
+
+    {% if not user.is_authenticated %}
+        <div class="panel panel--primary panel--rounded flow flow--small text--center" style="padding: 2.5rem; background: var(--color-grey1, #fff); border: 1px solid var(--color-grey6, #ddd); text-align: center;">
+            <p style="font-size: 1.1rem; font-weight: bold;">
+                Inicia sesión para sincronizar tus encuestas y votos
+            </p>
+            <p class="text--secondary">
+                Al conectarte con tu cuenta de Wikimedia podrás ver todas las encuestas que creaste, las encuestas donde participas y administrarlas desde cualquier dispositivo.
+            </p>
+            <p style="margin-top: 1.5rem;">
+                <a class="button button--primary" href="{% url 'login' %}?returnto={% url 'my' %}" style="padding: 0.75rem 1.75rem; text-decoration: none;">
+                    Iniciar sesión con Wikimedia
+                </a>
+            </p>
+        </div>
+    {% else %}
+        <!-- Encuestas Creadas por Mí -->
+        <div class="flow" style="margin-top: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--color-grey6, #ddd); padding-bottom: 0.5rem;">
+                <h2 style="margin: 0; font-size: 1.3rem; color: var(--color-primary8, #46a758);">
+                    Encuestas creadas por mí ({{ owned_polls|length }})
+                </h2>
+                <a href="{% url 'choose poll type' %}" class="button button--small button--primary" style="text-decoration: none;">
+                    + Nueva encuesta
+                </a>
+            </div>
+
+            <div class="flow flow--small" style="margin-top: 1rem;">
+                {% for poll in owned_polls %}
+                    <div class="panel panel--white panel--rounded flow flow--smaller" style="border: 1px solid var(--color-grey6, #ddd); padding: 1.25rem; background: var(--color-grey1, #fff);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                            <div>
+                                <h3 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">
+                                    <a href="{% url 'poll' slug=poll.slug %}" style="color: inherit; text-decoration: none;">
+                                        {{ poll.title }}
+                                    </a>
+                                </h3>
+                                <p class="text--secondary text--small" style="margin: 0;">
+                                    Creada el {{ poll.created_at|date:"d M Y" }} &bull; {{ poll.votes.count }} votos
+                                    {% if poll.is_closed %}
+                                        <span class="tag tag--danger" style="margin-left: 0.25rem;">Cerrada</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+
+                            <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+                                <a href="{% url 'poll' slug=poll.slug %}" class="button button--small" style="text-decoration: none;">
+                                    Ver encuesta
+                                </a>
+                                <a href="{% url 'poll admin' id=poll.id token=poll.admin_token %}" class="button button--small" style="text-decoration: none;">
+                                    {% icon 'gear' %} Administrar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text--secondary">No has creado encuestas aún.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Encuestas donde soy Co-anfitrión -->
+        {% if cohosted_polls %}
+            <div class="flow" style="margin-top: 2.5rem;">
+                <h2 style="font-size: 1.3rem; color: var(--color-primary8, #46a758); border-bottom: 2px solid var(--color-grey6, #ddd); padding-bottom: 0.5rem;">
+                    Encuestas como co-anfitrión ({{ cohosted_polls|length }})
+                </h2>
+
+                <div class="flow flow--small" style="margin-top: 1rem;">
+                    {% for poll in cohosted_polls %}
+                        <div class="panel panel--white panel--rounded flow flow--smaller" style="border: 1px solid var(--color-grey6, #ddd); padding: 1.25rem; background: var(--color-grey1, #fff);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div>
+                                    <h3 style="margin: 0 0 0.25rem 0; font-size: 1.2rem;">
+                                        <a href="{% url 'poll' slug=poll.slug %}" style="color: inherit; text-decoration: none;">
+                                            {{ poll.title }}
+                                        </a>
+                                    </h3>
+                                    <p class="text--secondary text--small" style="margin: 0;">
+                                        De {{ poll.author_name }} &bull; {{ poll.votes.count }} votos
+                                    </p>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <a href="{% url 'poll' slug=poll.slug %}" class="button button--small" style="text-decoration: none;">
+                                        Ver encuesta
+                                    </a>
+                                    <a href="{% url 'poll admin' id=poll.id token=poll.admin_token %}" class="button button--small" style="text-decoration: none;">
+                                        {% icon 'gear' %} Administrar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Encuestas donde he votado -->
+        <div class="flow" style="margin-top: 2.5rem;">
+            <h2 style="font-size: 1.3rem; color: var(--color-primary8, #46a758); border-bottom: 2px solid var(--color-grey6, #ddd); padding-bottom: 0.5rem;">
+                Mis votos ({{ user_votes|length }})
+            </h2>
+
+            <div class="flow flow--small" style="margin-top: 1rem;">
+                {% for vote in user_votes %}
+                    <div class="panel panel--white panel--rounded flow flow--smaller" style="border: 1px solid var(--color-grey6, #ddd); padding: 1.25rem; background: var(--color-grey1, #fff);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                            <div>
+                                <h3 style="margin: 0 0 0.25rem 0; font-size: 1.15rem;">
+                                    <a href="{% url 'poll' slug=vote.poll.slug %}" style="color: inherit; text-decoration: none;">
+                                        {{ vote.poll.title }}
+                                    </a>
+                                </h3>
+                                <p class="text--secondary text--small" style="margin: 0;">
+                                    Voto emitido el {{ vote.created_at|date:"d M Y, H:i" }} como <strong>{{ vote.author_name }}</strong>
+                                </p>
+                            </div>
+
+                            <div style="display: flex; gap: 0.5rem;">
+                                <a href="{% url 'poll' slug=vote.poll.slug %}" class="button button--small" style="text-decoration: none;">
+                                    Ver encuesta
+                                </a>
+                                {% if not vote.poll.is_closed and vote.poll.edit_vote_mode != 'no' %}
+                                    <a href="{% url 'edit vote' slug=vote.poll.slug vote_id=vote.id %}" class="button button--small" style="text-decoration: none;">
+                                        {% icon 'pen-to-square' %} Modificar voto
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text--secondary">No has votado en ninguna encuesta aún.</p>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

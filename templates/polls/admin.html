@@ -23,6 +23,9 @@
             <a href="{% url 'edit poll settings' id=poll.id token=poll.admin_token %}" class="button button--small" style="text-decoration: none;">
                 {% icon 'gear' %} Ajustes y privacidad
             </a>
+            <a href="{% url 'poll cohosts' id=poll.id token=poll.admin_token %}" class="button button--small" style="text-decoration: none;">
+                {% icon 'share' %} Co-anfitriones
+            </a>
             <a href="{% url 'edit poll titles' id=poll.id token=poll.admin_token %}" class="button button--small" style="text-decoration: none;">
                 Traducir títulos
             </a>

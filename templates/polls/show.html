@@ -4,139 +4,219 @@
 {% block title %}{{ poll.title }}{% endblock %}
 
 {% block content %}
-<div class="wrapper flow flow--large" style="max-width: 1000px; margin: 2rem auto; padding: 0 1rem;">
-    <div class="poll-header" style="border-bottom: 1px solid var(--color-grey6, #ddd); padding-bottom: 1.5rem;">
-        <h1 style="font-size: 2.2rem; margin-bottom: 0.5rem;">{{ poll.title }}</h1>
-        <p class="text--secondary">
-            Creado por <strong>{{ poll.author_name }}</strong> &bull; {{ poll.created_at|date:"d M Y, H:i" }}
-            {% if poll.is_closed %}
-                <span class="tag tag--danger" style="background: var(--color-red3, #feebec); color: var(--color-red10, #dc3e42); padding: 0.2rem 0.6rem; border-radius: 4px; margin-left: 0.5rem;">Cerrada</span>
-            {% endif %}
-        </p>
+<div id="mainFlow" class="flow flow--larger" style="max-width: 1100px; margin: 1.5rem auto; padding: 0 1rem;">
+    <!-- Main Poll Info Panel -->
+    <div class="panel panel--primary panel--rounded flow flow--small">
+        <h1 style="margin-bottom: 0.5rem;">{{ poll.title }}</h1>
+
         {% if poll.description %}
-            <div class="poll-description" style="margin-top: 1rem; line-height: 1.5; color: var(--color-grey12, #222);">
+            <div class="poll-description flow flow--small" style="line-height: 1.5;">
                 {{ poll.description|linebreaks }}
             </div>
         {% endif %}
 
-        <div class="poll-actions" style="display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap;">
-            <a class="button button--small" href="{% url 'poll csv' slug=poll.slug %}" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none;">
+        <p class="text--secondary">
+            Creado por <strong>{{ poll.get_authors_display }}</strong> &bull; {{ poll.created_at|date:"d M Y, H:i" }}
+            {% if poll.is_closed %}
+                <span class="tag tag--danger" style="margin-left: 0.5rem;">Cerrada</span>
+            {% endif %}
+        </p>
+
+        <div class="panel__separator no-print"></div>
+
+        <!-- Action buttons bar -->
+        <div class="flow flow--smaller no-print" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+            {% if results %}
+                <a href="#table-poll" class="button button--primary button--small" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none;">
+                    {% icon 'chart-simple' %} Ver resultados
+                </a>
+            {% endif %}
+
+            <a href="{% url 'poll csv' slug=poll.slug %}" class="button button--ghost button--small" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none;">
                 {% icon 'file-csv' %} Descargar CSV
             </a>
+
+            <button type="button" onclick="window.print()" class="button button--ghost button--small" style="display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                {% icon 'print' %} Imprimir
+            </button>
+
             {% if my_vote and not poll.is_closed and poll.edit_vote_mode != 'no' %}
-                <a class="button button--small" href="{% url 'edit vote' slug=poll.slug vote_id=my_vote.id %}" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none;">
+                <a href="{% url 'edit vote' slug=poll.slug vote_id=my_vote.id %}" class="button button--small" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none;">
                     {% icon 'pen-to-square' %} Modificar mi voto
                 </a>
             {% endif %}
+
             {% if user.is_authenticated and poll.owner_id == user.id %}
-                <a class="button button--small" href="{% url 'poll admin' id=poll.id token=poll.admin_token %}" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none;">
-                    {% icon 'gear' %} Administrar encuesta
+                <a href="{% url 'poll admin' id=poll.id token=poll.admin_token %}" class="button button--small" style="display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none; margin-left: auto;">
+                    {% icon 'lock' %} Administrar encuesta
                 </a>
             {% endif %}
         </div>
     </div>
 
-    <!-- Table of Proposals and Votes -->
-    <div style="overflow-x: auto; margin-top: 2rem;">
-        <table class="table" style="width: 100%; border-collapse: collapse; min-width: 600px; text-align: center;">
-            <thead>
-                <tr style="background: var(--color-grey3, #f5f5f5); border-bottom: 2px solid var(--color-grey7, #ccc);">
-                    <th style="text-align: left; padding: 0.75rem; width: 200px;">Participante</th>
-                    {% for proposal in proposals %}
-                        <th style="padding: 0.75rem; font-weight: bold;">
-                            {{ proposal.label }}
+    <!-- Eligibility Restrictions Notice -->
+    {% if not can_vote and eligibility_errors %}
+        <div class="panel panel--warning panel--rounded flow flow--small" style="border-left: 4px solid var(--color-yellow9, #d5ae39);">
+            <h3 style="margin-bottom: 0.25rem;">Requisitos para participar en esta encuesta</h3>
+            <ul style="margin: 0; padding-left: 1.25rem;">
+                {% for err in eligibility_errors %}
+                    <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+            {% if not user.is_authenticated %}
+                <p style="margin-top: 0.5rem;">
+                    <a class="button button--primary button--small" href="{% url 'login' %}?returnto={{ request.path }}">
+                        Iniciar sesión con cuenta de Wikimedia
+                    </a>
+                </p>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Proposals & Voting Table (Identical structure to Symfony version) -->
+    <div id="table-poll" class="scrollbox" data-controller="scrollbox">
+        <div class="proposals-table-container" data-controller="proposals-table" data-scrollbox-target="scroller">
+            <table class="proposals-table">
+                <thead data-scrollbox-target="thead">
+                    <tr>
+                        <th class="proposals-table__sticky-cell" scope="col">
+                            <div class="proposals-table-actions">
+                                <span style="font-weight: bold;">Participantes</span>
+                            </div>
                         </th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for vote in votes %}
-                    <tr style="border-bottom: 1px solid var(--color-grey5, #e5e5e5);">
-                        <td style="text-align: left; padding: 0.75rem; font-weight: 500;">
-                            {{ vote.author_name }}
-                            {% if vote.owner %}
-                                <span title="Usuario verificado" style="color: var(--color-grass9, #46a758); display: inline-block; vertical-align: middle;">
-                                    {% icon 'circle-check' %}
-                                </span>
-                            {% endif %}
-                        </td>
                         {% for proposal in proposals %}
-                            <td style="padding: 0.75rem;">
-                                {% for answer in vote.answers.all %}
-                                    {% if answer.proposal_id == proposal.id %}
-                                        {% if answer.value == 'yes' %}
-                                            <span style="color: var(--color-grass11, #2a7e3b); display: inline-block; vertical-align: middle;" title="Sí">
-                                                {% icon 'square-check' %}
-                                            </span>
-                                        {% elif answer.value == 'maybe' %}
-                                            <span style="color: var(--color-yellow11, #9e6c00); display: inline-block; vertical-align: middle;" title="Tal vez">
-                                                {% icon 'square-minus' %}
-                                            </span>
-                                        {% elif answer.value == 'no' %}
-                                            <span style="color: var(--color-red11, #ce2c31); display: inline-block; vertical-align: middle;" title="No">
-                                                {% icon 'square-xmark' %}
-                                            </span>
-                                        {% else %}
-                                            <span style="color: #bbb;">-</span>
-                                        {% endif %}
-                                    {% endif %}
-                                {% empty %}
-                                    <span style="color: #bbb;">-</span>
-                                {% endfor %}
-                            </td>
+                            <th class="proposals-table__choice text--center" scope="col">
+                                <span class="proposals-table__choice-label">{{ proposal.label }}</span>
+                            </th>
                         {% endfor %}
                     </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="{{ proposals|length|add:1 }}" style="padding: 1.5rem; color: #888; font-style: italic;">
-                            Aún no hay votos registrados. ¡Sé el primero en votar abajo!
-                        </td>
-                    </tr>
-                {% endfor %}
+                </thead>
 
-                <!-- Totals row -->
-                <tr style="background: var(--color-grass2, #f5fbf5); font-weight: bold; border-top: 2px solid var(--color-grass8, #65ba74); border-bottom: 2px solid var(--color-grass8, #65ba74);">
-                    <td style="text-align: left; padding: 0.75rem;">Total votos a favor</td>
-                    {% for proposal in proposals %}
-                        <td style="padding: 0.75rem; color: var(--color-grass11, #2a7e3b);">
-                            {% for prop_id, data in results.items %}
-                                {% if prop_id == proposal.id %}
-                                    {{ data.yes }}
-                                {% endif %}
+                <tbody data-scrollbox-target="tbody">
+                    {% for vote in votes %}
+                        <tr{% if my_vote and vote.id == my_vote.id %} class="proposals-table__vote--current"{% endif %}>
+                            <th class="proposals-table__sticky-cell" scope="row">
+                                <div class="proposals-table__author">
+                                    <span>{{ vote.author_name }}</span>
+                                    {% if vote.owner %}
+                                        <span title="Usuario verificado de Wikimedia" style="color: var(--color-grass9, #46a758); margin-left: 0.25rem;">
+                                            {% icon 'circle-check' %}
+                                        </span>
+                                    {% endif %}
+                                    {% if user.is_authenticated and vote.owner_id == user.id and not poll.is_closed %}
+                                        <a class="button button--icon button--extra-small" title="Modificar voto" href="{% url 'edit vote' slug=poll.slug vote_id=vote.id %}">
+                                            {% icon 'pen-to-square' %}
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </th>
+
+                            {% for proposal in proposals %}
+                                <td class="text--center">
+                                    {% for answer in vote.answers.all %}
+                                        {% if answer.proposal_id == proposal.id %}
+                                            {% if answer.value == 'yes' %}
+                                                <span class="vote vote--yes" title="Sí">
+                                                    {% icon 'square-check' %}
+                                                </span>
+                                            {% elif answer.value == 'no' %}
+                                                <span class="vote vote--no" title="No">
+                                                    {% icon 'square-xmark' %}
+                                                </span>
+                                            {% elif answer.value == 'maybe' %}
+                                                <span class="vote vote--maybe" title="Tal vez">
+                                                    {% icon 'square-minus' %}
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% empty %}
+                                        <span class="text--secondary">-</span>
+                                    {% endfor %}
+                                </td>
                             {% endfor %}
-                        </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="{{ proposals|length|add:1 }}" class="text--center text--secondary" style="padding: 2rem;">
+                                Aún no se han registrado votos. ¡Sé el primero en participar abajo!
+                            </td>
+                        </tr>
                     {% endfor %}
-                </tr>
+                </tbody>
 
-                <!-- Voting Form Row -->
-                {% if not poll.is_closed %}
-                    {% if can_vote %}
-                        <tr style="background: #ffffff; border-top: 2px solid var(--color-primary8, #46a758);">
-                            <td colspan="{{ proposals|length|add:1 }}" style="padding: 1.5rem 0.75rem 0 0.75rem;">
+                <tfoot data-scrollbox-target="tfoot">
+                    <!-- Results Sum Line -->
+                    {% if votes %}
+                        <tr class="proposals-table__sum-line">
+                            <th class="proposals-table__sticky-cell" scope="row">
+                                <div class="proposals-table__sum">
+                                    Votos favorables
+                                </div>
+                            </th>
+
+                            {% for proposal in proposals %}
+                                {% with res=results|get_item:proposal.id %}
+                                    <td class="text--center {% if proposal in preferred_choices %}text--success text--bold{% endif %}">
+                                        <div class="proposals-table__sum-content {% if proposal in preferred_choices %}proposals-table__sum-content--preferred{% endif %}">
+                                            {% if proposal in preferred_choices %}
+                                                <span class="proposals-table__sum-star" title="Opción más votada">
+                                                    {% icon 'star' %}
+                                                </span>
+                                            {% endif %}
+                                            <span class="proposals-table__sum-yes">
+                                                {{ res.yes|default:0 }}
+                                            </span>
+                                            {% if res.maybe > 0 %}
+                                                <span class="text--secondary text--small proposals-table__sum-maybe">
+                                                    ({{ res.maybe }})
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                {% endwith %}
+                            {% endfor %}
+                        </tr>
+                    {% endif %}
+
+                    <!-- Form to Cast Vote (Live in the table row) -->
+                    {% if not poll.is_closed and can_vote and not my_vote %}
+                        <tr class="no-print proposals-table__yours-section">
+                            <td colspan="{{ proposals|length|add:1 }}" style="padding: 1.5rem 1rem; background: var(--color-grass1, #fff);">
                                 <form method="post" style="display: flex; flex-direction: column; gap: 1rem;">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="vote">
 
                                     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
                                         <label for="author_name" style="font-weight: bold;">Tu nombre:</label>
-                                        <input type="text" name="author_name" id="author_name" required value="{{ user.display_name|default:'' }}" placeholder="Tu nombre..." style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 200px;">
+                                        <input
+                                            type="text"
+                                            name="author_name"
+                                            id="author_name"
+                                            required
+                                            value="{{ user.display_name|default:'' }}"
+                                            placeholder="Nombre o apodo..."
+                                            {% if user.is_authenticated %}readonly style="background: #f0f0f0; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"{% else %}style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"{% endif %}
+                                        >
                                     </div>
 
-                                    <div style="display: grid; grid-template-columns: repeat({{ proposals|length }}, 1fr); gap: 1rem; margin-top: 0.5rem; text-align: center;">
+                                    <div style="display: grid; grid-template-columns: repeat({{ proposals|length }}, 1fr); gap: 0.75rem; margin-top: 0.5rem;">
                                         {% for proposal in proposals %}
-                                            <div style="border: 1px solid var(--color-grey6, #ddd); border-radius: 6px; padding: 0.75rem; background: var(--color-grey1, #fff);">
-                                                <div style="font-weight: bold; margin-bottom: 0.5rem;">{{ proposal.label }}</div>
-                                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                                    <label style="cursor: pointer; color: var(--color-grass11, #2a7e3b);">
-                                                        <input type="radio" name="proposal_{{ proposal.id }}" value="yes" checked> Sí
+                                            <div style="border: 1px solid var(--color-grey6, #ddd); border-radius: 6px; padding: 0.75rem; background: var(--color-grey1, #fff); text-align: center;">
+                                                <div style="font-weight: bold; margin-bottom: 0.5rem; font-size: 0.95rem;">{{ proposal.label }}</div>
+                                                <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                                                    <label style="cursor: pointer; color: var(--color-grass11, #2a7e3b); display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
+                                                        <input type="radio" name="proposal_{{ proposal.id }}" value="yes" checked>
+                                                        {% icon 'square-check' %} Sí
                                                     </label>
                                                     {% if not poll.disable_maybe %}
-                                                        <label style="cursor: pointer; color: var(--color-yellow11, #9e6c00);">
-                                                            <input type="radio" name="proposal_{{ proposal.id }}" value="maybe"> Tal vez
+                                                        <label style="cursor: pointer; color: var(--color-yellow11, #9e6c00); display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
+                                                            <input type="radio" name="proposal_{{ proposal.id }}" value="maybe">
+                                                            {% icon 'square-minus' %} Tal vez
                                                         </label>
                                                     {% endif %}
-                                                    <label style="cursor: pointer; color: var(--color-red11, #ce2c31);">
-                                                        <input type="radio" name="proposal_{{ proposal.id }}" value="no"> No
+                                                    <label style="cursor: pointer; color: var(--color-red11, #ce2c31); display: flex; align-items: center; justify-content: center; gap: 0.25rem;">
+                                                        <input type="radio" name="proposal_{{ proposal.id }}" value="no">
+                                                        {% icon 'square-xmark' %} No
                                                     </label>
                                                 </div>
                                             </div>
@@ -144,52 +224,34 @@
                                     </div>
 
                                     <div style="text-align: right; margin-top: 0.5rem;">
-                                        <button type="submit" class="button button--primary" style="padding: 0.75rem 2rem; font-size: 1rem; cursor: pointer;">
+                                        <button type="submit" class="button button--primary" style="padding: 0.75rem 2rem; cursor: pointer;">
                                             Registrar mi voto
                                         </button>
                                     </div>
                                 </form>
                             </td>
                         </tr>
-                    {% elif eligibility_errors %}
-                        <tr style="background: var(--color-yellow2, #fefce9); border-top: 2px solid var(--color-yellow8, #d5ae39);">
-                            <td colspan="{{ proposals|length|add:1 }}" style="padding: 1.5rem; text-align: left;">
-                                <h3 style="color: var(--color-yellow11, #9e6c00); margin-bottom: 0.5rem; font-size: 1.1rem;">
-                                    Requisitos de elegibilidad para votar
-                                </h3>
-                                <ul style="margin: 0.5rem 0 1rem 1.25rem; color: var(--color-yellow12, #473b1f);">
-                                    {% for err in eligibility_errors %}
-                                        <li>{{ err }}</li>
-                                    {% endfor %}
-                                </ul>
-                                {% if not user.is_authenticated %}
-                                    <a class="button button--primary" href="{% url 'login' %}?returnto={{ request.path }}" style="padding: 0.5rem 1rem; text-decoration: none;">
-                                        Iniciar sesión con Wikimedia
-                                    </a>
-                                {% endif %}
-                            </td>
-                        </tr>
                     {% endif %}
-                {% endif %}
-            </tbody>
-        </table>
+                </tfoot>
+            </table>
+        </div>
     </div>
 
     <!-- Comments Section -->
-    <div class="comments-section" style="margin-top: 3rem; border-top: 1px solid var(--color-grey6, #ddd); padding-top: 1.5rem;">
+    <div class="panel panel--rounded flow flow--small" style="margin-top: 2rem;">
         <h2>Comentarios ({{ comments|length }})</h2>
 
-        <div class="comments-list flow flow--medium" style="margin-top: 1rem;">
+        <div class="flow flow--small" style="margin-top: 1rem;">
             {% for comment in comments %}
-                <div class="comment-item" style="background: var(--color-grey2, #fafafa); border: 1px solid var(--color-grey5, #eee); border-radius: 6px; padding: 1rem; margin-bottom: 0.75rem;">
-                    <div style="font-weight: bold; margin-bottom: 0.25rem;">
-                        {{ comment.author_name }}
-                        <span class="text--secondary" style="font-size: 0.85em; font-weight: normal; margin-left: 0.5rem;">{{ comment.created_at|date:"d M Y, H:i" }}</span>
+                <div class="panel panel--white panel--rounded flow flow--smaller" style="border: 1px solid var(--color-grey5, #eee); padding: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong>{{ comment.author_name }}</strong>
+                        <span class="text--secondary text--small">{{ comment.created_at|date:"d M Y, H:i" }}</span>
                     </div>
                     <div>{{ comment.content|linebreaks }}</div>
                 </div>
             {% empty %}
-                <p class="text--secondary">No hay comentarios en esta encuesta.</p>
+                <p class="text--secondary">No hay comentarios en esta encuesta aún.</p>
             {% endfor %}
         </div>
 
@@ -197,13 +259,21 @@
             <form method="post" style="margin-top: 1.5rem;" class="flow flow--small">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="comment">
-                <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
-                    <input type="text" name="author_name" value="{{ user.display_name|default:'' }}" placeholder="Tu nombre..." style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 200px;">
+                <div style="display: flex; gap: 1rem;">
+                    <input
+                        type="text"
+                        name="author_name"
+                        value="{{ user.display_name|default:'' }}"
+                        placeholder="Tu nombre..."
+                        {% if user.is_authenticated %}readonly style="background: #f0f0f0; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 200px;"{% else %}style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 200px;"{% endif %}
+                    >
                 </div>
-                <textarea name="content" rows="3" required placeholder="Escribe un comentario..." style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"></textarea>
-                <button type="submit" class="button" style="padding: 0.5rem 1.2rem; cursor: pointer; margin-top: 0.5rem;">
-                    Publicar comentario
-                </button>
+                <textarea name="content" rows="3" required placeholder="Escribe un comentario..." style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"></textarea>
+                <div>
+                    <button type="submit" class="button button--small" style="cursor: pointer;">
+                        Publicar comentario
+                    </button>
+                </div>
             </form>
         {% endif %}
     </div>

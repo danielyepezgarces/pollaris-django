@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load poll_extras %}
+
+{% block title %}Co-anfitriones – {{ poll.title }}{% endblock %}
+
+{% block content %}
+<div class="wrapper flow flow--large" style="max-width: 650px; margin: 2.5rem auto; padding: 0 1rem;">
+    <h1>Co-anfitriones de la encuesta</h1>
+    <p class="text--secondary">Los co-anfitriones pueden ayudarte a administrar o editar <strong>{{ poll.title }}</strong>.</p>
+
+    <!-- Lista de co-anfitriones actuales -->
+    <div style="background: var(--color-grey1, #fff); border: 1px solid var(--color-grey6, #ddd); border-radius: 8px; padding: 1.5rem;" class="flow flow--medium">
+        <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem; color: var(--color-primary8, #46a758);">
+            Co-anfitriones actuales
+        </h2>
+
+        <div class="flow flow--small">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #eee;">
+                <div>
+                    <strong>{{ poll.author_name }}</strong>
+                    <span class="text--secondary" style="font-size: 0.85rem; margin-left: 0.5rem;">(Creador principal)</span>
+                </div>
+                <span class="tag">Propietario</span>
+            </div>
+
+            {% for cohost in cohosts %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #eee;">
+                    <div>
+                        <strong>{{ cohost.user.display_name }}</strong>
+                        <span class="text--secondary" style="font-size: 0.85rem; margin-left: 0.5rem;">({{ cohost.user.username }})</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span class="tag">{% if cohost.cohost_right == 'full' %}Acceso total{% else %}Solo edición{% endif %}</span>
+                        <form method="post" action="{% url 'poll remove cohost' id=poll.id token=poll.admin_token user_id=cohost.user.id %}" style="margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit" class="button button--extra-small" style="background: var(--color-red9, #e5484d); color: white; border: none; cursor: pointer; border-radius: 4px;">
+                                {% icon 'trash' %}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text--secondary" style="margin-top: 0.5rem;">No hay co-anfitriones añadidos a esta encuesta.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Formulario para agregar co-anfitrión -->
+    <div style="background: var(--color-grey1, #fff); border: 1px solid var(--color-grey6, #ddd); border-radius: 8px; padding: 1.5rem; margin-top: 1.5rem;" class="flow flow--medium">
+        <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">Agregar co-anfitrión</h2>
+        <form method="post" class="flow flow--small">
+            {% csrf_token %}
+            <div class="field">
+                <label for="username" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
+                    Usuario de Wikimedia / Pollaris
+                </label>
+                <input type="text" name="username" id="username" required placeholder="Escribe el nombre de usuario..." style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                <small class="text--secondary">El usuario debe haber iniciado sesión al menos una vez en Pollaris.</small>
+            </div>
+
+            <div class="field" style="margin-top: 0.75rem;">
+                <label for="right" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">Permiso asignado</label>
+                <select name="right" id="right" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+                    <option value="edit">Solo edición (modificar opciones y ajustes)</option>
+                    <option value="full">Acceso total (administrar y eliminar)</option>
+                </select>
+            </div>
+
+            <div style="margin-top: 1rem;">
+                <button type="submit" class="button button--primary" style="padding: 0.6rem 1.5rem; cursor: pointer;">
+                    Agregar co-anfitrión
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <a href="{% url 'poll admin' id=poll.id token=poll.admin_token %}" class="button" style="text-decoration: none;">
+            Volver a la administración
+        </a>
+    </div>
+</div>
+{% endblock %}

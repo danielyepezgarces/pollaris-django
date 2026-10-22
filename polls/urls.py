@@ -24,7 +24,14 @@ urlpatterns = [
     path('polls/<str:id>/<str:token>/complete', views.complete_poll_view, name='complete poll'),
     path('polls/<str:id>/<str:token>/edits/titles', views.edit_poll_titles_view, name='edit poll titles'),
     path('polls/<str:id>/<str:token>/edits/descriptions', views.edit_poll_descriptions_view, name='edit poll descriptions'),
+    path('polls/<str:id>/<str:token>/cohosts', views.poll_cohosts_view, name='poll cohosts'),
+    path('polls/<str:id>/<str:token>/cohosts/<int:user_id>/remove', views.poll_remove_cohost_view, name='poll remove cohost'),
     path('polls/<str:id>/<str:token>/admin', views.poll_admin_view, name='poll admin'),
+
+    # Personal area, User search, Preferences
+    path('my', views.my_view, name='my'),
+    path('users/search', views.user_search_view, name='users search'),
+    path('preferences', views.preferences_view, name='edit preferences'),
 
     # Authentication routes
     path('login', views.login_view, name='login'),
