@@ -624,14 +624,22 @@ def poll_remove_cohost_view(request, id, token, user_id):
 
 
 def preferences_view(request):
+    from polls.services.translator import SUPPORTED_LOCALES, DEFAULT_LOCALE, set_current_locale, trans
+
     if request.method == 'POST':
-        locale = request.POST.get('locale', 'es')
-        request.session['_locale'] = locale
+        locale = request.POST.get('locale')
+        if locale and locale in SUPPORTED_LOCALES:
+            request.session['_locale'] = locale
+            set_current_locale(locale)
         messages.success(request, 'Preferencias guardadas.')
         referrer = request.META.get('HTTP_REFERER') or '/'
-        return redirect(referrer)
+        response = redirect(referrer)
+        if locale:
+            response.set_cookie('_locale', locale, max_age=365 * 24 * 3600, samesite='Lax')
+        return response
 
-    current_locale = request.session.get('_locale', 'es')
+    current_locale = getattr(request, 'locale', None) or request.session.get('_locale', DEFAULT_LOCALE)
     return render(request, 'preferences/edit.html', {
         'current_locale': current_locale,
+        'supported_locales': SUPPORTED_LOCALES,
     })

@@ -1,12 +1,41 @@
 {% extends 'base.html' %}
 {% load poll_extras %}
 
-{% block title %}Preferencias{% endblock %}
+{% block title %}{{ 'preferences.edit.title'|trans }}{% endblock %}
 
 {% block content %}
 <div class="wrapper flow flow--large" style="max-width: 550px; margin: 3rem auto; padding: 0 1rem;">
-    <h1>Preferencias</h1>
-    <p class="text--secondary">Personaliza el idioma y la visualización de Pollaris.</p>
+    <h1>{{ 'preferences.edit.title'|trans }}</h1>
+
+    {% if user.is_authenticated %}
+        <fieldset class="panel panel--rounded flow flow--small" style="margin-bottom: 1.5rem; background: var(--color-grey1, #fff); border: 1px solid var(--color-grey6, #ddd); border-radius: 8px; padding: 1.5rem;">
+            <legend class="text--bold" style="padding: 0 0.5rem;">{{ 'preferences.user_info.title'|trans }}</legend>
+
+            <div class="flow flow--tiny" style="margin-bottom: 0.75rem;">
+                <span class="text--secondary text--small">{{ 'preferences.user_info.username'|trans }}</span>
+                <div class="text--bold">
+                    <a href="https://meta.wikimedia.org/wiki/User:{{ user.username }}" target="_blank" rel="noopener noreferrer">
+                        {{ user.username }}
+                    </a>
+                </div>
+            </div>
+
+            <div class="flow flow--tiny">
+                <span class="text--secondary text--small">{{ 'preferences.user_info.email'|trans }}</span>
+                <div>
+                    {% if user.email %}
+                        <code>{{ user.email }}</code>
+                    {% else %}
+                        <span class="text--secondary"><em>{{ 'preferences.user_info.no_email'|trans }}</em></span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <p class="text--secondary text--smaller" style="margin-top: 0.75rem; margin-bottom: 0;">
+                {{ 'preferences.user_info.help'|trans }}
+            </p>
+        </fieldset>
+    {% endif %}
 
     <div style="background: var(--color-grey1, #fff); border: 1px solid var(--color-grey6, #ddd); border-radius: 8px; padding: 2rem;" class="flow flow--medium">
         <form method="post" class="flow flow--medium">
@@ -14,34 +43,31 @@
 
             <div class="field">
                 <label for="locale" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
-                    Idioma preferido
+                    {{ 'forms.preferences.locale.label'|trans }}
                 </label>
                 <select name="locale" id="locale" style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px;">
-                    <option value="es" {% if current_locale == 'es' %}selected{% endif %}>Español</option>
-                    <option value="en" {% if current_locale == 'en' %}selected{% endif %}>English</option>
-                    <option value="fr" {% if current_locale == 'fr' %}selected{% endif %}>Français</option>
-                    <option value="de" {% if current_locale == 'de' %}selected{% endif %}>Deutsch</option>
-                    <option value="it" {% if current_locale == 'it' %}selected{% endif %}>Italiano</option>
-                    <option value="pt" {% if current_locale == 'pt' %}selected{% endif %}>Português</option>
-                    <option value="ca" {% if current_locale == 'ca' %}selected{% endif %}>Català</option>
-                    <option value="eo" {% if current_locale == 'eo' %}selected{% endif %}>Esperanto</option>
+                    {% for code, name in supported_locales.items %}
+                        <option value="{{ code }}" {% if current_locale == code %}selected{% endif %}>
+                            {{ name }} ({{ code }})
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
 
             <div class="field" style="margin-top: 1rem;">
                 <label for="color_scheme" style="font-weight: bold; display: block; margin-bottom: 0.25rem;">
-                    Tema visual
+                    {{ 'forms.preferences.color_scheme.label'|trans }}
                 </label>
                 <select name="color_scheme" id="color_scheme" style="width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px;">
-                    <option value="auto">Automático (según el sistema)</option>
-                    <option value="light">Modo claro</option>
-                    <option value="dark">Modo oscuro</option>
+                    <option value="auto">{{ 'forms.preferences.color_scheme.auto'|trans }}</option>
+                    <option value="light">{{ 'forms.preferences.color_scheme.light'|trans }}</option>
+                    <option value="dark">{{ 'forms.preferences.color_scheme.dark'|trans }}</option>
                 </select>
             </div>
 
             <div style="margin-top: 2rem;">
                 <button type="submit" class="button button--primary" style="padding: 0.75rem 2rem; cursor: pointer; width: 100%;">
-                    Guardar preferencias
+                    {{ 'forms.preferences.submit'|trans }}
                 </button>
             </div>
         </form>

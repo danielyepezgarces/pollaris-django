@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 {% load poll_extras %}
-<html lang="es" data-controller="color-scheme" data-color-scheme="auto">
+<html lang="{{ bcp47_locale }}" data-controller="color-scheme" data-color-scheme="auto">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}{% endblock %} – Pollaris</title>
-    <meta name="description" content="{% block meta_description %}Pollaris es una herramienta para planificar, organizar y tomar decisiones de forma rápida y sencilla.{% endblock %}">
+    <title>{% block title %}{% endblock %} – {{ appName }}</title>
+    <meta name="description" content="{% block meta_description %}{% trans_msg 'base.default_title' appName=appName %}{% endblock %}">
 
     <link rel="stylesheet" href="/assets/styles/application.css">
     <link rel="stylesheet" href="/assets/home/application.css">
@@ -17,7 +17,7 @@
         <header class="layout__header header no-print" role="banner" data-controller="nav-toggle">
             <div class="header__brand">
                 <a class="header__title" href="{% url 'home' %}">
-                    Pollaris
+                    {{ appName }}
                 </a>
                 <button
                     class="header__hamburger"
@@ -33,24 +33,24 @@
 
             <nav class="header__nav" data-nav-toggle-target="nav">
                 <div class="header__links">
-                    <a class="header__link" href="{% url 'public polls' %}">Encuestas públicas</a>
-                    <a class="header__link" href="{% url 'choose poll type' %}">Crear encuesta</a>
-                    <a class="header__link" href="{% url 'my' %}">Mis encuestas</a>
+                    <a class="header__link" href="{% url 'public polls' %}">{{ 'layout.header.public_polls'|trans }}</a>
+                    <a class="header__link" href="{% url 'choose poll type' %}">{{ 'home.call_to_action.create_poll'|trans }}</a>
+                    <a class="header__link" href="{% url 'my' %}">{{ 'layout.header.my'|trans }}</a>
                     {% if user.is_staff %}
-                        <a class="header__link" href="/admin/">Panel Django</a>
+                        <a class="header__link" href="/admin/">{{ 'admin.title'|trans }}</a>
                     {% endif %}
                 </div>
 
                 <div class="header__actions">
                     <a class="button header__button button--small button--ghost" href="{% url 'edit preferences' %}" style="display: inline-flex; align-items: center; gap: 0.25rem;">
-                        {% icon 'gear' %} Preferencias
+                        {% icon 'gear' %} {{ 'layout.header.preferences'|trans }}
                     </a>
                     {% if user.is_authenticated %}
                         <span class="text--secondary text--small" style="margin-left: 0.5rem;">{{ user.display_name }}</span>
-                        <a class="button header__button button--small" href="{% url 'logout' %}" style="margin-left: 0.5rem;">Cerrar sesión</a>
+                        <a class="button header__button button--small" href="{% url 'logout' %}" style="margin-left: 0.5rem;">{{ 'layout.logout'|trans }}</a>
                     {% else %}
                         <a class="button header__button button--small" href="{% url 'login' %}?returnto={{ request.path }}" style="margin-left: 0.5rem;">
-                            Iniciar sesión
+                            {{ 'layout.login'|trans }}
                         </a>
                     {% endif %}
                 </div>
